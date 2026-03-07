@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  ============================================================
+  LIFE FACTORY — markup only
+  Styles  → life_factory.css
+  Logic   → life_factory.js
+  ============================================================
+-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚙ LIFE FACTORY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="life_factory.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div>
+      <div class="hdr-title">⚙ LIFE FACTORY</div>
+      <div class="hdr-sub">personal production system</div>
+      <div class="hdr-sub" id="hdr-date"></div>
+    </div>
+    <div class="eff-badge" id="eff-badge">EFFICIENCY 0%</div>
+  </header>
+
+  <!-- TAB BAR -->
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-panel="factory">🏭 Factory Floor</button>
+    <button class="tab"        role="tab" data-panel="tech">🔬 Tech Tree</button>
+    <button class="tab"        role="tab" data-panel="nodes">📊 Nodes</button>
+    <button class="tab"        role="tab" data-panel="manage">⚙ Manage</button>
+  </nav>
+
+  <!-- PANEL 1: FACTORY FLOOR -->
+  <main class="panel active" id="panel-factory" role="tabpanel">
+    <div id="bn-alert"></div>
+    <div class="sec">⚡ Production Lines — Today's Habits</div>
+    <div id="habit-list"></div>
+    <div class="sec" style="margin-top:20px">📈 Today's Output</div>
+    <div class="sum-grid" id="summary"></div>
+  </main>
+
+  <!-- PANEL 2: TECH TREE -->
+  <section class="panel" id="panel-tech" role="tabpanel">
+    <div class="sec">🔬 Tech Tree — Life Goals</div>
+    <p class="hint">Break goals into milestones. Complete milestones to earn XP and unlock goals.</p>
+    <div id="goal-list"></div>
+  </section>
+
+  <!-- PANEL 3: RESOURCE NODES -->
+  <section class="panel" id="panel-nodes" role="tabpanel">
+    <div class="sec">📊 Resource Nodes</div>
+    <div class="node-grid" id="node-grid"></div>
+    <div class="sec" style="margin-top:22px">📅 Heatmap — Last 4 Weeks</div>
+    <div class="heatmap" id="heatmap"></div>
+    <p class="hint" style="margin-top:5px">← 4 weeks ago · today →</p>
+  </section>
+
+  <!-- PANEL 4: MANAGE -->
+  <section class="panel" id="panel-manage" role="tabpanel">
+
+    <div class="sec">➕ Add Habit</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="h-name">Habit Name</label>
+        <input class="inp" id="h-name" placeholder="e.g. Morning workout">
+      </div>
+      <div>
+        <label class="inp-label" for="h-node">Node</label>
+        <select class="inp" id="h-node"></select>
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-habit">+ ADD</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:20px">🗑 Manage Habits</div>
+    <div id="manage-habits"></div>
+
+    <div class="sec" style="margin-top:20px">➕ Add Goal</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="g-label">Goal Label</label>
+        <input class="inp" id="g-label" placeholder="e.g. Read 5 books">
+      </div>
+      <div>
+        <label class="inp-label" for="g-node">Node</label>
+        <select class="inp" id="g-node"></select>
+      </div>
+      <div>
+        <label class="inp-label" for="g-xp">XP Cost</label>
+        <input class="inp" id="g-xp" type="number" value="200" min="50" max="5000" style="width:100px">
+      </div>
+      <div>
+        <label class="inp-label" for="g-unlocks">Unlocks (optional)</label>
+        <input class="inp" id="g-unlocks" placeholder="Next goal...">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-goal">+ ADD</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:28px">🧩 Add Custom Node</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="n-label">Node Name</label>
+        <input class="inp" id="n-label" placeholder="e.g. Creativity" style="width:180px">
+      </div>
+      <div>
+        <label class="inp-label" for="n-icon">Icon (emoji)</label>
+        <input class="inp" id="n-icon" placeholder="🎨" style="width:70px;text-align:center;font-size:1.2rem" maxlength="2">
+      </div>
+      <div>
+        <label class="inp-label" for="n-color">Color</label>
+        <input class="inp" id="n-color" type="color" value="#ff2d78" style="width:60px;height:42px;padding:2px;cursor:pointer">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-node">+ ADD NODE</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:20px">🧩 Manage Nodes</div>
+    <div id="manage-nodes"></div>
+
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="life_factory.js"></script>
+</body>
+</html>
