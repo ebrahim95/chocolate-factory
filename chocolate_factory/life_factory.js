@@ -38,6 +38,15 @@ const XP_PER_LEVEL = 100;
 /** Node keys that ship with the app and cannot be deleted */
 const BUILT_IN_NODES = ['health', 'mind', 'work', 'social', 'finance'];
 
+/** Short day labels used in habit cards */
+const DAY_SHORT  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+/** Full caps day labels used in day-picker buttons */
+const DAY_LABELS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+
+/** Ordered time-of-day slots for grouping habit cards */
+const TIME_ORDER = ['morning', 'afternoon', 'evening', 'anytime'];
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. APPLICATION STATE
@@ -98,12 +107,12 @@ const state = {
     finance: { label: 'Finance', icon: '💰',  color: '#5cb85c', xp: 0, level: 1 },
   },
   habits: [
-    { id: 1, name: 'Morning workout',       node: 'health'  },
-    { id: 2, name: 'Read 20 mins',          node: 'mind'    },
-    { id: 3, name: 'Deep work block (90m)', node: 'work'    },
-    { id: 4, name: 'Drink 2L water',        node: 'health'  },
-    { id: 5, name: 'Reach out to someone',  node: 'social'  },
-    { id: 6, name: 'Log expenses',          node: 'finance' },
+    { id: 1, name: 'Morning workout',       node: 'health',  time: 'morning',   priority: 'high',   xp: 30, notes: '',                   qtyTarget: null, qtyUnit: '',        days: [] },
+    { id: 2, name: 'Read 20 mins',          node: 'mind',    time: 'evening',   priority: 'medium', xp: 25, notes: 'Any book/article',    qtyTarget: null, qtyUnit: '',        days: [] },
+    { id: 3, name: 'Deep work block (90m)', node: 'work',    time: 'morning',   priority: 'high',   xp: 40, notes: 'No distractions',     qtyTarget: null, qtyUnit: '',        days: [] },
+    { id: 4, name: 'Drink 2L water',        node: 'health',  time: 'anytime',   priority: 'medium', xp: 20, notes: '',                   qtyTarget: 8,    qtyUnit: 'glasses', days: [] },
+    { id: 5, name: 'Reach out to someone',  node: 'social',  time: 'afternoon', priority: 'medium', xp: 25, notes: 'Text, call, or meet', qtyTarget: null, qtyUnit: '',        days: [] },
+    { id: 6, name: 'Log expenses',          node: 'finance', time: 'evening',   priority: 'low',    xp: 15, notes: '',                   qtyTarget: null, qtyUnit: '',        days: [] },
   ],
   goals: [
     {
@@ -146,6 +155,7 @@ const state = {
     },
   ],
   completions: {},
+  qtyProgress: {},
   nextHabitId: 7,
   nextGoalId:  5,
   nextTaskId:  15,
@@ -156,6 +166,9 @@ const expandedGoals = new Set();
 
 /** ID of the goal currently open in edit mode, or null */
 let editingGoal = null;
+
+/** ID of the habit currently open in edit mode in the Manage panel, or null */
+let editingHabit = null;
 
 /** ID of the goal pending delete confirmation, or null */
 let deleteGoalPending = null;
@@ -255,9 +268,12 @@ function streak(habitId) {
  * @returns {number}
  */
 function efficiency() {
-  if (!state.habits.length) return 0;
-  const done = (state.completions[todayStr()] || []).length;
-  return Math.round(done / state.habits.length * 1000) / 10;
+  const dow       = new Date().getDay();
+  const scheduled = state.habits.filter(h => _isScheduledToday(h, dow));
+  if (!scheduled.length) return 0;
+  const completedIds = state.completions[todayStr()] || [];
+  const done = completedIds.filter(id => scheduled.some(h => h.id === id)).length;
+  return Math.round(done / scheduled.length * 1000) / 10;
 }
 
 /**
@@ -342,6 +358,62 @@ function clearAndAppend(container, children) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 7b. HABIT DETAIL HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the display label for a time-of-day key.
+ * @param {string} time
+ * @returns {string}
+ */
+function _timeLabel(time) {
+  return { morning: '🌅 Morning', afternoon: '☀️ Afternoon', evening: '🌙 Evening', anytime: '⏰ Anytime' }[time] || '⏰ Anytime';
+}
+
+/**
+ * Returns a sort weight for priority (lower = rendered first).
+ * @param {string} p
+ * @returns {number}
+ */
+function _priorityWeight(p) {
+  return { high: 0, medium: 1, low: 2 }[p] ?? 1;
+}
+
+/**
+ * Returns true if a habit is scheduled for the given day-of-week.
+ * An empty days array means active every day.
+ * @param {Habit}  h
+ * @param {number} dow - 0=Sun … 6=Sat
+ * @returns {boolean}
+ */
+function _isScheduledToday(h, dow) {
+  return !h.days || h.days.length === 0 || h.days.includes(dow);
+}
+
+/**
+ * Builds a day-picker row of toggle buttons.
+ * @param {string}   pickerId   - id attribute for the wrapper div
+ * @param {number[]} activeDays - days that start active (empty = all active)
+ * @returns {HTMLElement}
+ */
+function _buildDayPicker(pickerId, activeDays) {
+  const wrap = el('div', ['day-picker']);
+  wrap.id = pickerId;
+  DAY_LABELS.forEach((label, d) => {
+    const btn = el('button', ['day-btn'], label);
+    btn.type = 'button';
+    btn.dataset.day = d;
+    if (!activeDays || activeDays.length === 0 || activeDays.includes(d)) {
+      btn.classList.add('active');
+    }
+    btn.addEventListener('click', () => btn.classList.toggle('active'));
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 8. RENDER: HEADER
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -403,47 +475,141 @@ function _renderBottleneck() {
 
 /**
  * @private Builds the daily habit card list.
+ * Filtered to today's schedule, grouped by time of day, sorted by priority.
  */
 function _renderHabitList() {
   const container = document.getElementById('habit-list');
   const today     = todayStr();
+  const dow       = new Date().getDay();
   const done      = state.completions[today] || [];
 
-  if (!state.habits.length) {
-    clearAndAppend(container, [el('p', ['empty-msg'], 'No habits yet — add some in Manage.')]);
+  const todayHabits = state.habits
+    .filter(h => _isScheduledToday(h, dow))
+    .sort((a, b) => _priorityWeight(a.priority) - _priorityWeight(b.priority));
+
+  if (!todayHabits.length) {
+    clearAndAppend(container, [el('p', ['empty-msg'], 'No habits scheduled for today — add some in Manage.')]);
     return;
   }
 
-  const cards = state.habits.map(h => {
-    const nd     = state.nodes[h.node];
-    const isDone = done.includes(h.id);
-    const st     = streak(h.id);
+  // Group by time slot
+  const groups = {};
+  TIME_ORDER.forEach(t => { groups[t] = []; });
+  todayHabits.forEach(h => { groups[h.time || 'anytime'].push(h); });
 
-    const card = el('div', ['habit', ...(isDone ? ['done'] : [])]);
-    card.style.setProperty('--c', nd.color);
-    card.addEventListener('click', e => toggleHabit(h.id, e));
+  const nodes = [];
+  for (const time of TIME_ORDER) {
+    const habits = groups[time];
+    if (!habits.length) continue;
+    nodes.push(el('div', ['habit-group-label'], _timeLabel(time)));
+    habits.forEach(h => nodes.push(_buildHabitCard(h, done, today)));
+  }
 
-    const check = el('div', ['hcheck'], isDone ? '✓' : '');
-    const name  = el('div', ['hname'], h.name);
-    const tag   = el('div', ['htag'],  `${nd.icon} ${nd.label}`);
-    const fire  = el('div', ['hstreak', ...(st ? [] : ['z'])], st ? `🔥 ${st}d` : '0d');
+  clearAndAppend(container, nodes);
+}
 
-    card.append(check, name, tag, fire);
-    return card;
-  });
+/**
+ * @private Builds a single habit card for the Factory Floor.
+ * @param {Habit}    h
+ * @param {number[]} done  - IDs completed today
+ * @param {string}   today - today's date string
+ * @returns {HTMLElement}
+ */
+function _buildHabitCard(h, done, today) {
+  const nd     = state.nodes[h.node];
+  const isDone = done.includes(h.id);
+  const st     = streak(h.id);
+  const xpVal  = h.xp || HABIT_XP;
+  const hasQty = !!(h.qtyTarget && h.qtyUnit);
+  const qty    = state.qtyProgress?.[today]?.[h.id] || 0;
 
-  clearAndAppend(container, cards);
+  // Card shell
+  const card = el('div', ['habit', ...(isDone ? ['done'] : [])]);
+  card.style.setProperty('--c', nd.color);
+  card.addEventListener('click', e => toggleHabit(h.id, e));
+
+  // ── Left: main info ────────────────────────────────────────────────────────
+  const main = el('div', ['habit-main']);
+
+  // Name row
+  const nameRow = el('div');
+  nameRow.style.cssText = 'display:flex;align-items:center;gap:8px';
+
+  const check   = el('div', ['hcheck'], isDone ? '✓' : '');
+  const nameEl  = el('div', ['hname'], h.name);
+
+  const priColor = h.priority === 'high' ? '#FF3B3B' : h.priority === 'low' ? '#aaa' : '#888';
+  const priIcon  = h.priority === 'high' ? '▲' : h.priority === 'low' ? '▼' : '—';
+  const priSpan  = el('span', [], priIcon);
+  priSpan.style.cssText = `font-size:.6rem;font-weight:700;color:${priColor};flex-shrink:0`;
+
+  nameRow.append(check, nameEl, priSpan);
+  main.appendChild(nameRow);
+
+  // Tag row: node, XP, schedule days
+  const tagRow = el('div');
+  tagRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap';
+
+  const nodeTag = el('div', ['htag'], `${nd.icon} ${nd.label}`);
+  const xpTag   = el('div', ['htag'], `+${xpVal} XP`);
+  xpTag.style.color = '#1a1aff';
+  tagRow.append(nodeTag, xpTag);
+
+  if (h.days && h.days.length) {
+    tagRow.appendChild(el('div', ['htag'], h.days.map(d => DAY_SHORT[d]).join(' ')));
+  }
+  main.appendChild(tagRow);
+
+  // Notes
+  if (h.notes) {
+    main.appendChild(el('div', ['habit-notes'], h.notes));
+  }
+
+  // ── Right: qty widget + streak ─────────────────────────────────────────────
+  const right = el('div', ['habit-right']);
+
+  if (hasQty) {
+    const qtyWrap = el('div', ['habit-qty']);
+    qtyWrap.addEventListener('click', e => e.stopPropagation());
+
+    const barWrap = el('div', ['qty-bar-wrap']);
+    const barFill = el('div', ['qty-bar-fill']);
+    barFill.style.width      = `${Math.min(100, qty / h.qtyTarget * 100).toFixed(0)}%`;
+    barFill.style.background = nd.color;
+    barWrap.appendChild(barFill);
+
+    const stepRow = el('div');
+    stepRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:3px';
+
+    const minusBtn = el('button', ['qty-btn'], '−');
+    minusBtn.addEventListener('click', e => adjustQty(h.id, -1, e));
+    const qtyVal = el('span', ['qty-val'], `${qty}/${h.qtyTarget} ${h.qtyUnit}`);
+    const plusBtn = el('button', ['qty-btn'], '+');
+    plusBtn.addEventListener('click', e => adjustQty(h.id, +1, e));
+
+    stepRow.append(minusBtn, qtyVal, plusBtn);
+    qtyWrap.append(barWrap, stepRow);
+    right.appendChild(qtyWrap);
+  }
+
+  right.appendChild(el('div', ['hstreak', ...(st ? [] : ['z'])], st ? `🔥 ${st}d` : '0d'));
+
+  card.append(main, right);
+  return card;
 }
 
 /**
  * @private Builds the three today's-output stat cards.
  */
 function _renderSummary() {
-  const today = todayStr();
-  const done  = (state.completions[today] || []).length;
-  const total = state.habits.length;
-  const best  = total ? Math.max(...state.habits.map(h => streak(h.id))) : 0;
-  const e     = efficiency();
+  const today     = todayStr();
+  const dow       = new Date().getDay();
+  const scheduled = state.habits.filter(h => _isScheduledToday(h, dow));
+  const total     = scheduled.length;
+  const completedIds = state.completions[today] || [];
+  const done      = completedIds.filter(id => scheduled.some(h => h.id === id)).length;
+  const best      = state.habits.length ? Math.max(...state.habits.map(h => streak(h.id))) : 0;
+  const e         = efficiency();
 
   /**
    * @param {string} lbl
@@ -862,6 +1028,7 @@ function _renderHeatmap() {
 
 /**
  * Re-renders the habit list in the Manage panel.
+ * Shows a summary row normally, or an inline edit form when editingHabit matches.
  */
 function renderManage() {
   const container = document.getElementById('manage-habits');
@@ -871,26 +1038,123 @@ function renderManage() {
     return;
   }
 
-  const rows = state.habits.map(h => {
-    const nd  = state.nodes[h.node];
-    const row = el('div', ['manage-row']);
-    row.style.setProperty('--c', nd.color);
+  clearAndAppend(container, state.habits.map(h =>
+    editingHabit === h.id ? _buildHabitEditRow(h) : _buildHabitSummaryRow(h)
+  ));
+}
 
-    const name = el('span', [], h.name);
-    name.style.cssText = 'flex:1;font-size:.87rem';
+/**
+ * @private Compact habit row in the Manage panel.
+ * @param {Habit} h
+ * @returns {HTMLElement}
+ */
+function _buildHabitSummaryRow(h) {
+  const nd  = state.nodes[h.node];
+  const row = el('div', ['manage-row']);
+  row.style.setProperty('--c', nd.color);
 
-    const tag = el('span', [], `${nd.icon} ${nd.label}`);
-    tag.style.cssText = 'font-size:.7rem;color:#555';
+  const info = el('div');
+  info.style.cssText = 'flex:1;min-width:0';
 
-    const del = el('button', ['btn', 'btn-ghost'], '✕');
-    del.style.cssText = 'padding:3px 8px;font-size:.7rem';
-    del.addEventListener('click', () => deleteHabit(h.id));
+  const nameEl = el('div', [], h.name);
+  nameEl.style.cssText = 'font-size:.87rem;font-weight:700';
 
-    row.append(name, tag, del);
-    return row;
+  const days   = (h.days && h.days.length) ? h.days.map(d => DAY_SHORT[d]).join(' ') : 'Every day';
+  const detail = el('div');
+  detail.style.cssText = 'font-size:.65rem;color:#555;margin-top:2px';
+  detail.textContent   = `${nd.icon} ${nd.label} · ${_timeLabel(h.time || 'anytime')} · ${h.priority || 'medium'} · +${h.xp || HABIT_XP} XP · ${days}`;
+
+  info.append(nameEl, detail);
+
+  const editBtn = el('button', ['btn', 'btn-ghost'], '✏ EDIT');
+  editBtn.style.cssText = 'padding:3px 10px;font-size:.7rem';
+  editBtn.addEventListener('click', () => startHabitEdit(h.id));
+
+  const delBtn = el('button', ['btn', 'btn-ghost'], '✕');
+  delBtn.style.cssText = 'padding:3px 8px;font-size:.7rem';
+  delBtn.addEventListener('click', () => deleteHabit(h.id));
+
+  row.append(info, editBtn, delBtn);
+  return row;
+}
+
+/**
+ * @private Inline edit form for a habit in the Manage panel.
+ * @param {Habit} h
+ * @returns {HTMLElement}
+ */
+function _buildHabitEditRow(h) {
+  const nd  = state.nodes[h.node];
+  const row = el('div', ['manage-row']);
+  row.style.setProperty('--c', nd.color);
+  row.style.cssText += ';flex-direction:column;align-items:stretch;gap:10px;padding:14px';
+
+  // Row 1: name, node, time, priority, XP
+  const r1 = el('div');
+  r1.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end';
+
+  r1.appendChild(_formField('Name',       `eh-name-${h.id}`,     'input',  h.name,               { style: 'width:200px' }));
+  r1.appendChild(_formField('XP Value',   `eh-xp-${h.id}`,       'input',  h.xp || HABIT_XP,     { type: 'number', style: 'width:80px' }));
+
+  // Node select
+  const nodeWrap = _formField('Node', `eh-node-${h.id}`, 'select', '');
+  const nodeSel  = nodeWrap.querySelector('select');
+  for (const [k, nd2] of Object.entries(state.nodes)) {
+    const opt = el('option', [], `${nd2.icon} ${nd2.label}`);
+    opt.value = k; opt.selected = k === h.node;
+    nodeSel.appendChild(opt);
+  }
+  r1.appendChild(nodeWrap);
+
+  // Time select
+  const timeWrap = _formField('Time of Day', `eh-time-${h.id}`, 'select', '', { style: 'width:140px' });
+  const timeSel  = timeWrap.querySelector('select');
+  [['anytime','⏰ Anytime'],['morning','🌅 Morning'],['afternoon','☀️ Afternoon'],['evening','🌙 Evening']].forEach(([v, txt]) => {
+    const o = el('option', [], txt); o.value = v; o.selected = (h.time || 'anytime') === v; timeSel.appendChild(o);
   });
+  r1.appendChild(timeWrap);
 
-  clearAndAppend(container, rows);
+  // Priority select
+  const priWrap = _formField('Priority', `eh-priority-${h.id}`, 'select', '', { style: 'width:120px' });
+  const priSel  = priWrap.querySelector('select');
+  [['medium','— Medium'],['high','▲ High'],['low','▼ Low']].forEach(([v, txt]) => {
+    const o = el('option', [], txt); o.value = v; o.selected = (h.priority || 'medium') === v; priSel.appendChild(o);
+  });
+  r1.appendChild(priWrap);
+
+  // Row 2: notes, qty target, qty unit
+  const r2 = el('div');
+  r2.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end';
+
+  const notesWrap = _formField('Notes', `eh-notes-${h.id}`, 'input', h.notes || '', { placeholder: 'Extra context…', style: 'width:100%' });
+  notesWrap.style.cssText = 'flex:1;min-width:180px';
+  r2.appendChild(notesWrap);
+  r2.appendChild(_formField('Qty Target', `eh-qty-target-${h.id}`, 'input', h.qtyTarget || '', { type: 'number', min: '1', placeholder: '—',       style: 'width:80px' }));
+  r2.appendChild(_formField('Qty Unit',   `eh-qty-unit-${h.id}`,   'input', h.qtyUnit   || '', { placeholder: 'glasses', style: 'width:100px' }));
+
+  // Row 3: schedule picker
+  const schedWrap = el('div');
+  const schedLbl  = el('label', ['inp-label'], 'Schedule');
+  schedLbl.setAttribute('for', `eh-days-${h.id}`);
+  schedWrap.append(schedLbl, _buildDayPicker(`eh-days-${h.id}`, h.days));
+
+  // Row 4: action buttons
+  const btns = el('div');
+  btns.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+
+  const saveBtn   = el('button', ['btn', 'btn-amber'], '✓ SAVE');
+  saveBtn.addEventListener('click', () => saveHabitEdit(h.id));
+
+  const cancelBtn = el('button', ['btn', 'btn-ghost'], '✕ CANCEL');
+  cancelBtn.addEventListener('click', cancelHabitEdit);
+
+  const deleteBtn = el('button', ['btn'], '🗑 DELETE');
+  deleteBtn.style.cssText = 'background:#FF3B3B;color:#fff;border-color:#c03030;margin-left:auto';
+  deleteBtn.addEventListener('click', () => deleteHabit(h.id));
+
+  btns.append(saveBtn, cancelBtn, deleteBtn);
+  row.append(r1, r2, schedWrap, btns);
+  return row;
 }
 
 /**
@@ -966,20 +1230,44 @@ function refreshNodeSelects() {
  * @param {number}     id - Habit ID
  * @param {MouseEvent} e  - Click event (used for XP float position)
  */
+/**
+ * Adjusts quantity progress for a habit today; auto-completes at target.
+ * @param {number}     id    - Habit ID
+ * @param {number}     delta - +1 or -1
+ * @param {MouseEvent} e
+ */
+function adjustQty(id, delta, e) {
+  e.stopPropagation();
+  const today = todayStr();
+  if (!state.qtyProgress[today]) state.qtyProgress[today] = {};
+  const h    = state.habits.find(x => x.id === id);
+  const cur  = state.qtyProgress[today][id] || 0;
+  const next = Math.max(0, Math.min(h.qtyTarget || 99, cur + delta));
+  state.qtyProgress[today][id] = next;
+  if (next >= h.qtyTarget) {
+    if (!state.completions[today]) state.completions[today] = [];
+    if (!state.completions[today].includes(id)) {
+      state.completions[today].push(id);
+      const xpVal = h.xp || HABIT_XP;
+      addXp(h.node, xpVal);
+      xpFloat(e.clientX, e.clientY, `+${xpVal} XP`);
+    }
+  }
+  renderFactory();
+}
+
 function toggleHabit(id, e) {
   const today = todayStr();
   if (!state.completions[today]) state.completions[today] = [];
-  const lst = state.completions[today];
-  const idx = lst.indexOf(id);
+  const lst   = state.completions[today];
+  const idx   = lst.indexOf(id);
+  const h     = state.habits.find(x => x.id === id);
+  const xpVal = h?.xp || HABIT_XP;
   if (idx > -1) {
     lst.splice(idx, 1);
   } else {
     lst.push(id);
-    const h = state.habits.find(x => x.id === id);
-    if (h) {
-      addXp(h.node, HABIT_XP);
-      xpFloat(e.clientX, e.clientY, `+${HABIT_XP} XP`);
-    }
+    if (h) { addXp(h.node, xpVal); xpFloat(e.clientX, e.clientY, `+${xpVal} XP`); }
   }
   renderFactory();
 }
@@ -988,11 +1276,27 @@ function toggleHabit(id, e) {
  * Creates a new habit from the Manage panel form and adds it to state.
  */
 function addHabit() {
-  const name = document.getElementById('h-name').value.trim();
-  const node = document.getElementById('h-node').value;
+  const name      = document.getElementById('h-name').value.trim();
+  const node      = document.getElementById('h-node').value;
+  const time      = document.getElementById('h-time').value;
+  const priority  = document.getElementById('h-priority').value;
+  const xp        = parseInt(document.getElementById('h-xp').value) || HABIT_XP;
+  const notes     = document.getElementById('h-notes').value.trim();
+  const qtyTarget = parseInt(document.getElementById('h-qty-target').value) || null;
+  const qtyUnit   = document.getElementById('h-qty-unit').value.trim();
+  const days      = Array.from(document.querySelectorAll('#h-days .day-btn.active'))
+                      .map(b => parseInt(b.dataset.day));
   if (!name) { toast('Enter a habit name', '#FF3B3B'); return; }
-  state.habits.push({ id: state.nextHabitId++, name, node });
-  document.getElementById('h-name').value = '';
+  state.habits.push({ id: state.nextHabitId++, name, node, time, priority, xp, notes, qtyTarget, qtyUnit, days });
+  // reset form
+  document.getElementById('h-name').value       = '';
+  document.getElementById('h-notes').value      = '';
+  document.getElementById('h-qty-target').value = '';
+  document.getElementById('h-qty-unit').value   = '';
+  document.getElementById('h-xp').value         = '25';
+  document.getElementById('h-time').value       = 'anytime';
+  document.getElementById('h-priority').value   = 'medium';
+  document.querySelectorAll('#h-days .day-btn').forEach(b => b.classList.add('active'));
   renderFactory();
   renderManage();
   toast(`Added: ${name}`, '#00c853');
@@ -1002,8 +1306,49 @@ function addHabit() {
  * Removes a habit from state by ID.
  * @param {number} id - Habit ID
  */
+/**
+ * Opens inline edit mode for a habit in the Manage panel.
+ * @param {number} id - Habit ID
+ */
+function startHabitEdit(id) {
+  editingHabit = id;
+  renderManage();
+}
+
+/** Closes habit edit mode without saving. */
+function cancelHabitEdit() {
+  editingHabit = null;
+  renderManage();
+}
+
+/**
+ * Saves edits from the inline habit edit form back to state.
+ * @param {number} id - Habit ID
+ */
+function saveHabitEdit(id) {
+  const h = state.habits.find(x => x.id === id);
+  if (!h) return;
+  const name = document.getElementById(`eh-name-${id}`).value.trim();
+  if (!name) { toast('Name cannot be empty', '#FF3B3B'); return; }
+  h.name      = name;
+  h.node      = document.getElementById(`eh-node-${id}`).value;
+  h.time      = document.getElementById(`eh-time-${id}`).value;
+  h.priority  = document.getElementById(`eh-priority-${id}`).value;
+  h.xp        = parseInt(document.getElementById(`eh-xp-${id}`).value) || HABIT_XP;
+  h.notes     = document.getElementById(`eh-notes-${id}`).value.trim();
+  h.qtyTarget = parseInt(document.getElementById(`eh-qty-target-${id}`).value) || null;
+  h.qtyUnit   = document.getElementById(`eh-qty-unit-${id}`).value.trim();
+  h.days      = Array.from(document.querySelectorAll(`#eh-days-${id} .day-btn.active`))
+                  .map(b => parseInt(b.dataset.day));
+  editingHabit = null;
+  renderFactory();
+  renderManage();
+  toast('Habit updated', '#00c853');
+}
+
 function deleteHabit(id) {
   state.habits = state.habits.filter(h => h.id !== id);
+  editingHabit = null;
   renderFactory();
   renderManage();
   toast('Habit removed', '#FF3B3B');
@@ -1244,6 +1589,10 @@ function _bindStaticListeners() {
 
   // Allow Enter key on habit/goal name inputs
   document.getElementById('h-name').addEventListener('keydown', e => { if (e.key === 'Enter') addHabit(); });
+  // Day-picker toggle buttons in the Add Habit form
+  document.querySelectorAll('#h-days .day-btn').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('active'));
+  });
   document.getElementById('g-label').addEventListener('keydown', e => { if (e.key === 'Enter') addGoal(); });
 }
 

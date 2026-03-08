@@ -556,3 +556,109 @@
   display:     flex;
   align-items: flex-end;
 }
+
+/* ==========================================================================
+   HABIT DETAILS — time grouping, priority, qty stepper, schedule picker
+========================================================================== */
+
+/* Time-of-day section header above each habit group */
+.habit-group-label {
+  font-family:    'Archivo Black', sans-serif;
+  font-size:      .58rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color:          #888;
+  padding:        10px 2px 4px;
+  border-bottom:  2px dashed #ccc;
+  margin-bottom:  8px;
+  margin-top:     4px;
+}
+.habit-group-label:first-child { margin-top: 0; }
+
+/* Split layout inside each habit card */
+.habit-main  { flex: 1; min-width: 0; }
+.habit-right {
+  display:        flex;
+  flex-direction: column;
+  align-items:    flex-end;
+  gap:            6px;
+  flex-shrink:    0;
+}
+
+/* Italic notes line on a habit card */
+.habit-notes {
+  font-size:   .68rem;
+  color:       #777;
+  font-style:  italic;
+  margin-top:  4px;
+}
+
+/* Quantity progress widget */
+.habit-qty   { text-align: center; min-width: 90px; }
+
+.qty-bar-wrap {
+  height:   6px;
+  border:   2px solid var(--black);
+  background: #e0e0e0;
+  overflow: hidden;
+}
+.qty-bar-fill {
+  height:     100%;
+  transition: width .25s;
+}
+.qty-val {
+  font-size:   .65rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* +/− stepper buttons */
+.qty-btn {
+  width:       22px;
+  height:      22px;
+  border:      2px solid var(--black);
+  background:  var(--white);
+  font-size:   .95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor:      pointer;
+  display:     flex;
+  align-items: center;
+  justify-content: center;
+  padding:     0;
+  flex-shrink: 0;
+}
+.qty-btn:hover  { background: var(--yellow); }
+.qty-btn:active { transform: scale(.88); }
+
+/* Day-of-week picker */
+.day-picker { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.day-btn {
+  font-family:    'Archivo Black', sans-serif;
+  font-size:      .58rem;
+  letter-spacing: .5px;
+  padding:        4px 7px;
+  border:         2px solid var(--black);
+  background:     #e0ddd5;
+  color:          #888;
+  cursor:         pointer;
+  user-select:    none;
+  outline:        none;
+  min-width:      36px;
+  text-align:     center;
+  transition:     background .1s, color .1s;
+}
+.day-btn.active {
+  background: var(--yellow);
+  color:      var(--black);
+  box-shadow: 2px 2px 0 var(--black);
+}
+.day-btn:hover { background: var(--yellow); color: var(--black); }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .habit-right  { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+  .qty-btn      { width: 28px; height: 28px; font-size: 1rem; }
+  .day-btn      { padding: 5px 5px; font-size: .52rem; min-width: 30px; }
+}

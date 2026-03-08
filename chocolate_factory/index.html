@@ -66,14 +66,63 @@
     <div class="form-row">
       <div>
         <label class="inp-label" for="h-name">Habit Name</label>
-        <input class="inp" id="h-name" placeholder="e.g. Morning workout">
+        <input class="inp" id="h-name" placeholder="e.g. Morning workout" style="width:200px">
       </div>
       <div>
         <label class="inp-label" for="h-node">Node</label>
         <select class="inp" id="h-node"></select>
       </div>
-      <div class="form-end">
-        <button class="btn btn-amber" id="btn-add-habit">+ ADD</button>
+      <div>
+        <label class="inp-label" for="h-time">Time of Day</label>
+        <select class="inp" id="h-time" style="width:140px">
+          <option value="anytime">⏰ Anytime</option>
+          <option value="morning">🌅 Morning</option>
+          <option value="afternoon">☀️ Afternoon</option>
+          <option value="evening">🌙 Evening</option>
+        </select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-priority">Priority</label>
+        <select class="inp" id="h-priority" style="width:120px">
+          <option value="medium">— Medium</option>
+          <option value="high">▲ High</option>
+          <option value="low">▼ Low</option>
+        </select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-xp">XP Value</label>
+        <input class="inp" id="h-xp" type="number" value="25" min="1" max="200" style="width:80px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px">
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="h-notes">Notes (optional)</label>
+        <input class="inp" id="h-notes" placeholder="Extra context…" style="width:100%">
+      </div>
+      <div>
+        <label class="inp-label" for="h-qty-target">Qty Target</label>
+        <input class="inp" id="h-qty-target" type="number" min="1" placeholder="e.g. 8" style="width:90px">
+      </div>
+      <div>
+        <label class="inp-label" for="h-qty-unit">Unit</label>
+        <input class="inp" id="h-qty-unit" placeholder="glasses" style="width:100px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px;align-items:flex-start">
+      <div>
+        <label class="inp-label">Schedule (days active)</label>
+        <div class="day-picker" id="h-days">
+          <button type="button" class="day-btn active" data-day="0">SUN</button>
+          <button type="button" class="day-btn active" data-day="1">MON</button>
+          <button type="button" class="day-btn active" data-day="2">TUE</button>
+          <button type="button" class="day-btn active" data-day="3">WED</button>
+          <button type="button" class="day-btn active" data-day="4">THU</button>
+          <button type="button" class="day-btn active" data-day="5">FRI</button>
+          <button type="button" class="day-btn active" data-day="6">SAT</button>
+        </div>
+      </div>
+      <div class="form-end" style="margin-left:auto">
+        <button class="btn btn-amber" id="btn-add-habit">+ ADD HABIT</button>
       </div>
     </div>
 
