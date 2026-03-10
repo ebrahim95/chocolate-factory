@@ -19,3 +19,9 @@ Muri (overburden): Avoid overloading people or systems —
 Mura (unevenness): Reduce variability in processes —
 
 Remember the app is here to enforce an identity, nothing more. 
+
+Add the ability use a pen or your fingers to draw stuff
+And use a tree to track habit
+Also add it to gh-pages by deploying it automatically 
+Use rough.js or freehand.js to start drawing canvas
+Used turbo

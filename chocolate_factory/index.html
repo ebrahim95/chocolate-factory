@@ -1,18 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-<!--
-  ============================================================
-  LIFE FACTORY — markup only
-  Styles  → life_factory.css
-  Logic   → life_factory.js
-  ============================================================
--->
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>⚙ LIFE FACTORY</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="life_factory.css">
+  <link rel="stylesheet" href="chocolate_factory.css">
 </head>
 <body>
 
@@ -20,7 +13,7 @@
   <header class="hdr">
     <div>
       <div class="hdr-title">⚙ LIFE FACTORY</div>
-      <div class="hdr-sub">personal production system</div>
+      <div class="hdr-sub">personal development system</div>
       <div class="hdr-sub" id="hdr-date"></div>
     </div>
     <div class="eff-badge" id="eff-badge">EFFICIENCY 0%</div>
@@ -28,38 +21,124 @@
 
   <!-- TAB BAR -->
   <nav class="tabs" role="tablist">
-    <button class="tab active" role="tab" data-panel="factory">🏭 Factory Floor</button>
-    <button class="tab"        role="tab" data-panel="tech">🔬 Tech Tree</button>
+    <button class="tab active" role="tab" data-panel="factory">🏭 Systems</button>
+    <button class="tab"        role="tab" data-panel="focus">⏱ Deep Work</button>
+    <button class="tab"        role="tab" data-panel="lab">🧪 Lab</button>
+    <button class="tab"        role="tab" data-panel="tech">🔬 Goals</button>
     <button class="tab"        role="tab" data-panel="nodes">📊 Nodes</button>
     <button class="tab"        role="tab" data-panel="manage">⚙ Manage</button>
   </nav>
 
-  <!-- PANEL 1: FACTORY FLOOR -->
+  <!-- PANEL 1: SYSTEMS (Factory Floor) -->
   <main class="panel active" id="panel-factory" role="tabpanel">
-    <div id="bn-alert"></div>
-    <div class="sec">⚡ Production Lines — Today's Habits</div>
+    <div id="identity-bar"></div>
+    <div id="focus-node-alert"></div>
+    <div class="sec">⚡ Today's Systems</div>
     <div id="habit-list"></div>
     <div class="sec" style="margin-top:20px">📈 Today's Output</div>
     <div class="sum-grid" id="summary"></div>
   </main>
 
-  <!-- PANEL 2: TECH TREE -->
+  <!-- PANEL 2: DEEP WORK TIMER -->
+  <section class="panel" id="panel-focus" role="tabpanel">
+    <div class="sec">⏱ Deep Work Session</div>
+    <p class="hint">Longer sessions earn bonus XP. No multitasking — one node, full focus.</p>
+
+    <div class="focus-setup" id="focus-setup">
+      <div class="form-row">
+        <div>
+          <label class="inp-label" for="focus-node">Node</label>
+          <select class="inp" id="focus-node"></select>
+        </div>
+        <div>
+          <label class="inp-label" for="focus-task">What are you working on?</label>
+          <input class="inp" id="focus-task" placeholder="e.g. Write chapter 3" style="width:280px">
+        </div>
+      </div>
+      <div class="focus-presets">
+        <button class="btn btn-ghost focus-preset" data-mins="25">25 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="50">50 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="90">90 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="120">2 hr</button>
+        <input class="inp" id="focus-custom-mins" type="number" min="5" max="480" placeholder="custom min" style="width:110px">
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-amber" id="btn-start-focus" style="font-size:.9rem;padding:10px 28px">▶ START SESSION</button>
+      </div>
+    </div>
+
+    <div class="focus-active" id="focus-active" style="display:none">
+      <div class="focus-timer-card">
+        <div class="focus-node-label" id="focus-active-node"></div>
+        <div class="focus-task-label" id="focus-active-task"></div>
+        <div class="focus-clock" id="focus-clock">00:00</div>
+        <div class="focus-xp-preview" id="focus-xp-preview"></div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:18px">
+          <button class="btn btn-amber" id="btn-end-focus" style="font-size:.9rem;padding:10px 28px">✓ COMPLETE SESSION</button>
+          <button class="btn btn-ghost" id="btn-abort-focus">✕ ABANDON</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:28px">📋 Session History</div>
+    <div id="focus-log"></div>
+  </section>
+
+  <!-- PANEL 3: LAB (experiment log) -->
+  <section class="panel" id="panel-lab" role="tabpanel">
+    <div class="sec">🧪 Experiment Lab</div>
+    <p class="hint">Real progress requires trying, failing, and adjusting. Log every experiment — wins and losses.</p>
+
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="lab-goal">Goal</label>
+        <select class="inp" id="lab-goal" style="width:200px"></select>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="lab-what">What did you try?</label>
+        <input class="inp" id="lab-what" placeholder="Describe the experiment…" style="width:100%">
+      </div>
+      <div>
+        <label class="inp-label" for="lab-outcome">Outcome</label>
+        <select class="inp" id="lab-outcome" style="width:130px">
+          <option value="win">✅ Win</option>
+          <option value="partial">⚡ Partial</option>
+          <option value="fail">❌ Fail</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:4px">
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="lab-insight">Key insight / what to adjust</label>
+        <input class="inp" id="lab-insight" placeholder="What did you learn?" style="width:100%">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-experiment">+ LOG EXPERIMENT</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:24px">📊 Experiment Log</div>
+    <div id="lab-log"></div>
+  </section>
+
+  <!-- PANEL 4: TECH TREE / GOALS -->
   <section class="panel" id="panel-tech" role="tabpanel">
-    <div class="sec">🔬 Tech Tree — Life Goals</div>
-    <p class="hint">Break goals into milestones. Complete milestones to earn XP and unlock goals.</p>
+    <div class="sec">🔬 Goal Systems</div>
+    <p class="hint">Break goals into milestones. Complete milestones to earn XP and unlock next goals.</p>
     <div id="goal-list"></div>
   </section>
 
-  <!-- PANEL 3: RESOURCE NODES -->
+  <!-- PANEL 5: RESOURCE NODES -->
   <section class="panel" id="panel-nodes" role="tabpanel">
     <div class="sec">📊 Resource Nodes</div>
+    <p class="hint">Your identity statements keep you anchored when motivation fades.</p>
     <div class="node-grid" id="node-grid"></div>
-    <div class="sec" style="margin-top:22px">📅 Heatmap — Last 4 Weeks</div>
+    <div class="sec" style="margin-top:22px">📅 Completion Heatmap — Last 4 Weeks</div>
     <div class="heatmap" id="heatmap"></div>
     <p class="hint" style="margin-top:5px">← 4 weeks ago · today →</p>
   </section>
 
-  <!-- PANEL 4: MANAGE -->
+  <!-- PANEL 6: MANAGE -->
   <section class="panel" id="panel-manage" role="tabpanel">
 
     <div class="sec">➕ Add Habit</div>
@@ -166,6 +245,10 @@
         <label class="inp-label" for="n-color">Color</label>
         <input class="inp" id="n-color" type="color" value="#ff2d78" style="width:60px;height:42px;padding:2px;cursor:pointer">
       </div>
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="n-identity">Identity Statement</label>
+        <input class="inp" id="n-identity" placeholder="I am someone who…" style="width:100%">
+      </div>
       <div class="form-end">
         <button class="btn btn-amber" id="btn-add-node">+ ADD NODE</button>
       </div>
@@ -177,7 +260,6 @@
   </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <script src="life_factory.js"></script>
+  <script src="chocolate_factory.js"></script>
 </body>
 </html>
