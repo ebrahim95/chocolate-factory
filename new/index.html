@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚙ LIFE FACTORY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="chocolate_factory.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div>
+      <div class="hdr-title">⚙ LIFE FACTORY</div>
+      <div class="hdr-sub">personal development system</div>
+      <div class="hdr-sub" id="hdr-date"></div>
+    </div>
+    <div class="eff-badge" id="eff-badge">EFFICIENCY 0%</div>
+  </header>
+
+  <!-- TAB BAR -->
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-panel="factory">🏭 Systems</button>
+    <button class="tab"        role="tab" data-panel="focus">⏱ Deep Work</button>
+    <button class="tab"        role="tab" data-panel="lab">🧪 Lab</button>
+    <button class="tab"        role="tab" data-panel="tech">🔬 Goals</button>
+    <button class="tab"        role="tab" data-panel="nodes">📊 Nodes</button>
+    <button class="tab"        role="tab" data-panel="manage">⚙ Manage</button>
+  </nav>
+
+  <!-- PANEL 1: SYSTEMS -->
+  <main class="panel active" id="panel-factory" role="tabpanel">
+    <div id="identity-bar"></div>
+    <div id="focus-node-alert"></div>
+    <div class="sec">⚡ Today's Systems</div>
+    <div id="habit-list"></div>
+    <div class="sec" style="margin-top:20px">📈 Today's Output</div>
+    <div class="sum-grid" id="summary"></div>
+  </main>
+
+  <!-- PANEL 2: DEEP WORK TIMER -->
+  <section class="panel" id="panel-focus" role="tabpanel">
+    <div class="sec">⏱ Deep Work Session</div>
+    <p class="hint">Longer sessions earn bonus XP. No multitasking — one node, full focus.</p>
+
+    <div class="focus-setup" id="focus-setup">
+      <div class="form-row">
+        <div>
+          <label class="inp-label" for="focus-node">Node</label>
+          <select class="inp" id="focus-node"></select>
+        </div>
+        <div>
+          <label class="inp-label" for="focus-task">What are you working on?</label>
+          <input class="inp" id="focus-task" placeholder="e.g. Write chapter 3" style="width:280px">
+        </div>
+      </div>
+      <div class="focus-presets">
+        <button class="btn btn-ghost focus-preset" data-mins="25">25 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="50">50 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="90">90 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="120">2 hr</button>
+        <input class="inp" id="focus-custom-mins" type="number" min="5" max="480" placeholder="custom min" style="width:110px">
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-amber" id="btn-start-focus" style="font-size:.9rem;padding:10px 28px">▶ START SESSION</button>
+      </div>
+    </div>
+
+    <div class="focus-active" id="focus-active" style="display:none">
+      <div class="focus-timer-card">
+        <div class="focus-node-label" id="focus-active-node"></div>
+        <div class="focus-task-label" id="focus-active-task"></div>
+        <div class="focus-clock" id="focus-clock">00:00</div>
+        <div class="focus-xp-preview" id="focus-xp-preview"></div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:18px">
+          <button class="btn btn-amber" id="btn-end-focus" style="font-size:.9rem;padding:10px 28px">✓ COMPLETE SESSION</button>
+          <button class="btn btn-ghost" id="btn-abort-focus">✕ ABANDON</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:28px">📋 Session History</div>
+    <div id="focus-log"></div>
+  </section>
+
+  <!-- PANEL 3: LAB -->
+  <section class="panel" id="panel-lab" role="tabpanel">
+    <div class="sec">🧪 Experiment Lab</div>
+    <p class="hint">Real progress requires trying, failing, and adjusting. Log every experiment — wins and losses.</p>
+
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="lab-goal">Goal</label>
+        <select class="inp" id="lab-goal" style="width:200px"></select>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="lab-what">What did you try?</label>
+        <input class="inp" id="lab-what" placeholder="Describe the experiment…" style="width:100%">
+      </div>
+      <div>
+        <label class="inp-label" for="lab-outcome">Outcome</label>
+        <select class="inp" id="lab-outcome" style="width:130px">
+          <option value="win">✅ Win</option>
+          <option value="partial">⚡ Partial</option>
+          <option value="fail">❌ Fail</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:4px">
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="lab-insight">Key insight / what to adjust</label>
+        <input class="inp" id="lab-insight" placeholder="What did you learn?" style="width:100%">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-experiment">+ LOG EXPERIMENT</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:24px">📊 Experiment Log</div>
+    <div id="lab-log"></div>
+  </section>
+
+  <!-- PANEL 4: GOALS -->
+  <section class="panel" id="panel-tech" role="tabpanel">
+    <div class="sec">🔬 Goal Systems</div>
+    <p class="hint">Break goals into milestones. Complete milestones to earn XP and unlock next goals.</p>
+    <div id="goal-list"></div>
+  </section>
+
+  <!-- PANEL 5: NODES -->
+  <section class="panel" id="panel-nodes" role="tabpanel">
+    <div class="sec">📊 Resource Nodes</div>
+    <p class="hint">Your identity statements keep you anchored when motivation fades.</p>
+    <div class="node-grid" id="node-grid"></div>
+    <div class="sec" style="margin-top:22px">📅 Completion Heatmap — Last 4 Weeks</div>
+    <div class="heatmap" id="heatmap"></div>
+    <p class="hint" style="margin-top:5px">← 4 weeks ago · today →</p>
+  </section>
+
+  <!-- PANEL 6: MANAGE -->
+  <section class="panel" id="panel-manage" role="tabpanel">
+
+    <div class="sec">➕ Add Habit</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="h-name">Habit Name</label>
+        <input class="inp" id="h-name" placeholder="e.g. Morning workout" style="width:200px">
+      </div>
+      <div>
+        <label class="inp-label" for="h-node">Node</label>
+        <select class="inp" id="h-node"></select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-time">Time of Day</label>
+        <select class="inp" id="h-time" style="width:140px">
+          <option value="anytime">⏰ Anytime</option>
+          <option value="morning">🌅 Morning</option>
+          <option value="afternoon">☀️ Afternoon</option>
+          <option value="evening">🌙 Evening</option>
+        </select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-priority">Priority</label>
+        <select class="inp" id="h-priority" style="width:120px">
+          <option value="medium">— Medium</option>
+          <option value="high">▲ High</option>
+          <option value="low">▼ Low</option>
+        </select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-xp">XP Value</label>
+        <input class="inp" id="h-xp" type="number" value="25" min="1" max="200" style="width:80px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px">
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="h-notes">Notes (optional)</label>
+        <input class="inp" id="h-notes" placeholder="Extra context…" style="width:100%">
+      </div>
+      <div>
+        <label class="inp-label" for="h-qty-target">Qty Target</label>
+        <input class="inp" id="h-qty-target" type="number" min="1" placeholder="e.g. 8" style="width:90px">
+      </div>
+      <div>
+        <label class="inp-label" for="h-qty-unit">Unit</label>
+        <input class="inp" id="h-qty-unit" placeholder="glasses" style="width:100px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px;align-items:flex-start">
+      <div>
+        <label class="inp-label">Schedule (days active)</label>
+        <div class="day-picker" id="h-days">
+          <button type="button" class="day-btn active" data-day="0">SUN</button>
+          <button type="button" class="day-btn active" data-day="1">MON</button>
+          <button type="button" class="day-btn active" data-day="2">TUE</button>
+          <button type="button" class="day-btn active" data-day="3">WED</button>
+          <button type="button" class="day-btn active" data-day="4">THU</button>
+          <button type="button" class="day-btn active" data-day="5">FRI</button>
+          <button type="button" class="day-btn active" data-day="6">SAT</button>
+        </div>
+      </div>
+      <div class="form-end" style="margin-left:auto">
+        <button class="btn btn-amber" id="btn-add-habit">+ ADD HABIT</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:20px">🗑 Manage Habits</div>
+    <div id="manage-habits"></div>
+
+    <div class="sec" style="margin-top:20px">➕ Add Goal</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="g-label">Goal Label</label>
+        <input class="inp" id="g-label" placeholder="e.g. Read 5 books">
+      </div>
+      <div>
+        <label class="inp-label" for="g-node">Node</label>
+        <select class="inp" id="g-node"></select>
+      </div>
+      <div>
+        <label class="inp-label" for="g-xp">XP Cost</label>
+        <input class="inp" id="g-xp" type="number" value="200" min="50" max="5000" style="width:100px">
+      </div>
+      <div>
+        <label class="inp-label" for="g-unlocks">Unlocks (optional)</label>
+        <input class="inp" id="g-unlocks" placeholder="Next goal...">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-goal">+ ADD</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:28px">🧩 Add Custom Node</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="n-label">Node Name</label>
+        <input class="inp" id="n-label" placeholder="e.g. Creativity" style="width:180px">
+      </div>
+      <div>
+        <label class="inp-label" for="n-icon">Icon (emoji)</label>
+        <input class="inp" id="n-icon" placeholder="🎨" style="width:70px;text-align:center;font-size:1.2rem" maxlength="2">
+      </div>
+      <div>
+        <label class="inp-label" for="n-color">Color</label>
+        <input class="inp" id="n-color" type="color" value="#ff2d78" style="width:60px;height:42px;padding:2px;cursor:pointer">
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="n-identity">Identity Statement</label>
+        <input class="inp" id="n-identity" placeholder="I am someone who…" style="width:100%">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-node">+ ADD NODE</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:20px">🧩 Manage Nodes</div>
+    <div id="manage-nodes"></div>
+
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!--
+    ═══════════════════════════════════════════════════════════
+    SCRIPT LOADING ORDER — dependencies must come before dependents
+    ═══════════════════════════════════════════════════════════
+
+    Layer 1 — Foundation (no dependencies)
+      constants.js      magic values used everywhere
+      state.js          single source of truth
+      utils/xp.js       pure XP maths
+      utils/date.js     date helpers and formatters
+      utils/dom.js      el(), clearAndAppend(), formField() …
+      utils/ui.js       toast(), xpFloat()
+      utils/stats.js    efficiency(), bottleneck() …
+
+    Layer 2 — Components (depend on Layer 1 + state)
+      components/Header.js
+      components/IdentityBar.js
+      components/HabitCard.js
+      components/HabitList.js
+      components/Summary.js
+      components/FocusPanel.js
+      components/LabPanel.js
+      components/SubtaskList.js
+      components/GoalCard.js       depends on SubtaskList
+      components/GoalList.js       depends on GoalCard
+      components/NodeGrid.js
+      components/ManagePanel.js
+
+    Layer 3 — Actions (mutate state then call renders)
+      actions/habits.js
+      actions/focus.js
+      actions/lab.js
+      actions/goals.js
+      actions/subtasks.js
+      actions/nodes.js
+
+    Layer 4 — Entry point (wires everything together)
+      main.js
+    ═══════════════════════════════════════════════════════════
+  -->
+
+  <!-- Layer 1: Foundation -->
+  <script src="js/constants.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils/xp.js"></script>
+  <script src="js/utils/date.js"></script>
+  <script src="js/utils/dom.js"></script>
+  <script src="js/utils/ui.js"></script>
+  <script src="js/utils/stats.js"></script>
+
+  <!-- Layer 2: Components -->
+  <script src="js/components/Header.js"></script>
+  <script src="js/components/IdentityBar.js"></script>
+  <script src="js/components/HabitCard.js"></script>
+  <script src="js/components/HabitList.js"></script>
+  <script src="js/components/Summary.js"></script>
+  <script src="js/components/FocusPanel.js"></script>
+  <script src="js/components/LabPanel.js"></script>
+  <script src="js/components/SubtaskList.js"></script>
+  <script src="js/components/GoalCard.js"></script>
+  <script src="js/components/GoalList.js"></script>
+  <script src="js/components/NodeGrid.js"></script>
+  <script src="js/components/ManagePanel.js"></script>
+
+  <!-- Layer 3: Actions -->
+  <script src="js/actions/habits.js"></script>
+  <script src="js/actions/focus.js"></script>
+  <script src="js/actions/lab.js"></script>
+  <script src="js/actions/goals.js"></script>
+  <script src="js/actions/subtasks.js"></script>
+  <script src="js/actions/nodes.js"></script>
+
+  <!-- Layer 4: Entry point -->
+  <script src="js/main.js"></script>
+
+</body>
+</html>
