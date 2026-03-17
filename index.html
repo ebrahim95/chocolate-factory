@@ -1,2145 +1,340 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <!--
-  ============================================================
-  LIFE FACTORY
-  A neo-brutalist productivity tracker inspired by factory
-  management games. Track habits, goals, and life nodes.
-  ============================================================
-  Structure:
-    1. <head>   — meta, fonts, CSS variables, component styles
-    2. <body>   — header, tabs, four panels, toast
-    3. <script> — all application logic (see script comments)
-  ============================================================
--->
-
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>⚙ LIFE FACTORY</title>
-
-        <!-- Fonts: Archivo Black (headings) + Space Mono (body/mono) -->
-        <link
-            href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap"
-            rel="stylesheet"
-        />
-
-        <style>
-            /* ==========================================================================
-       DESIGN TOKENS
-       Neo-brutalist palette: cream background, hard black borders,
-       flat accent colors, no border-radius, no gradients, no blur.
-    ========================================================================== */
-            :root {
-                --black: #0a0a0a;
-                --white: #f5f0e8;
-                --yellow: #ffe500;
-                --red: #ff3b3b;
-                --blue: #1a1aff;
-                --green: #00c853;
-                --pink: #ff2d78;
-                --shadow: 4px 4px 0 var(--black);
-                --shadow-lg: 6px 6px 0 var(--black);
-            }
-
-            /* ==========================================================================
-       RESET & BASE
-    ========================================================================== */
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-
-            body {
-                background: var(--white);
-                color: var(--black);
-                font-family: "Space Mono", monospace;
-                min-height: 100vh;
-                /* Crosshair cursor reinforces the brutalist, utilitarian aesthetic */
-                cursor:
-                    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%230a0a0a'/%3E%3C/svg%3E")
-                        10 10,
-                    crosshair;
-            }
-
-            ::-webkit-scrollbar {
-                width: 8px;
-            }
-            ::-webkit-scrollbar-track {
-                background: var(--white);
-                border-left: 2px solid var(--black);
-            }
-            ::-webkit-scrollbar-thumb {
-                background: var(--black);
-            }
-
-            /* ==========================================================================
-       HEADER
-       Sticky yellow bar with the app title and live efficiency badge.
-    ========================================================================== */
-            .hdr {
-                background: var(--yellow);
-                border-bottom: 3px solid var(--black);
-                padding: 16px 28px;
-                display: flex;
-                align-items: center;
-                gap: 16px;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-            }
-
-            .hdr-title {
-                font-family: "Archivo Black", sans-serif;
-                font-size: 1.8rem;
-                color: var(--black);
-                letter-spacing: -1px;
-                text-transform: uppercase;
-                line-height: 1;
-            }
-
-            .hdr-sub {
-                font-size: 0.62rem;
-                color: #555;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                margin-top: 2px;
-            }
-
-            /* Dynamically colored via JS based on efficiency score */
-            .eff-badge {
-                margin-left: auto;
-                font-family: "Archivo Black", sans-serif;
-                font-size: 1rem;
-                padding: 6px 16px;
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow);
-                background: var(--white);
-                white-space: nowrap;
-                text-transform: uppercase;
-            }
-
-            /* ==========================================================================
-       TABS
-       Black tab bar; active tab flips to yellow.
-    ========================================================================== */
-            .tabs {
-                display: flex;
-                background: var(--black);
-                overflow-x: auto;
-            }
-
-            .tab {
-                padding: 12px 22px;
-                font-family: "Archivo Black", sans-serif;
-                font-size: 0.75rem;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                cursor: pointer;
-                border: none;
-                background: none;
-                color: #888;
-                border-right: 2px solid #222;
-                transition:
-                    background 0.1s,
-                    color 0.1s;
-                white-space: nowrap;
-                outline: none;
-            }
-
-            .tab:hover {
-                background: #1a1a1a;
-                color: var(--white);
-            }
-            .tab.active {
-                background: var(--yellow);
-                color: var(--black);
-            }
-
-            /* ==========================================================================
-       PANELS
-       Only the active panel is shown; each is max-width constrained.
-    ========================================================================== */
-            .panel {
-                display: none;
-                padding: 24px;
-                max-width: 900px;
-                margin: 0 auto;
-            }
-            .panel.active {
-                display: block;
-            }
-
-            /* ==========================================================================
-       SECTION TITLES
-       Bold uppercase heading with a thick bottom border.
-    ========================================================================== */
-            .sec {
-                font-family: "Archivo Black", sans-serif;
-                font-size: 0.9rem;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-                margin-bottom: 16px;
-                padding-bottom: 8px;
-                border-bottom: 3px solid var(--black);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            /* ==========================================================================
-       BOTTLENECK ALERT
-       Red banner shown on Factory Floor when a node is lagging behind.
-    ========================================================================== */
-            .bn {
-                background: var(--red);
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow);
-                padding: 12px 16px;
-                margin-bottom: 18px;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 0.82rem;
-                font-weight: 700;
-                color: var(--white);
-            }
-
-            @keyframes pulse {
-                0%,
-                100% {
-                    opacity: 1;
-                }
-                50% {
-                    opacity: 0.6;
-                }
-            }
-            .pulse {
-                animation: pulse 1.5s ease-in-out infinite;
-                font-size: 1.1rem;
-            }
-
-            /* ==========================================================================
-       HABIT CARDS
-       Clickable cards that toggle daily completion.
-       Hard shadow lifts on hover; presses in on active.
-    ========================================================================== */
-            .habit {
-                background: var(--white);
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow);
-                padding: 12px 16px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                cursor: pointer;
-                user-select: none;
-                margin-bottom: 10px;
-                transition:
-                    transform 0.1s,
-                    box-shadow 0.1s;
-            }
-
-            .habit:hover {
-                transform: translate(-2px, -2px);
-                box-shadow: var(--shadow-lg);
-            }
-            .habit:active {
-                transform: translate(2px, 2px);
-                box-shadow: none;
-            }
-
-            .habit.done {
-                background: #e8e8e8;
-            }
-            .habit.done .hname {
-                text-decoration: line-through;
-                color: #888;
-            }
-
-            .hcheck {
-                width: 22px;
-                height: 22px;
-                border: 3px solid var(--black);
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 0.8rem;
-                font-weight: 700;
-                background: var(--white);
-                transition: background 0.1s;
-            }
-
-            .habit.done .hcheck {
-                background: var(--black);
-                color: var(--yellow);
-            }
-
-            .hname {
-                font-size: 0.9rem;
-                flex: 1;
-                font-weight: 700;
-            }
-
-            .htag {
-                font-size: 0.65rem;
-                color: #555;
-                white-space: nowrap;
-                border: 2px solid var(--black);
-                padding: 1px 6px;
-                background: var(--white);
-            }
-
-            .hstreak {
-                font-size: 0.7rem;
-                font-weight: 700;
-                padding: 2px 8px;
-                border: 2px solid var(--black);
-                background: var(--yellow);
-            }
-
-            /* Zero-streak variant: muted grey */
-            .hstreak.z {
-                background: #e8e8e8;
-                color: #888;
-            }
-
-            /* ==========================================================================
-       SUMMARY STAT CARDS (Factory Floor)
-    ========================================================================== */
-            .sum-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 12px;
-                margin-top: 18px;
-            }
-
-            .sum-card {
-                background: var(--white);
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow);
-                padding: 16px;
-                text-align: center;
-            }
-
-            .sum-lbl {
-                font-size: 0.6rem;
-                color: #555;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-                margin-bottom: 6px;
-            }
-
-            .sum-val {
-                font-family: "Archivo Black", sans-serif;
-                font-size: 1.6rem;
-                line-height: 1;
-            }
-
-            /* ==========================================================================
-       GOAL CARDS (Tech Tree)
-       Left-border color is driven by --c (the node color) set inline.
-    ========================================================================== */
-            .goal {
-                background: var(--white);
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow-lg);
-                overflow: hidden;
-                margin-bottom: 16px;
-            }
-
-            .goal-head {
-                padding: 16px;
-                border-left: 8px solid var(--c, var(--black));
-            }
-
-            .goal-title {
-                font-family: "Archivo Black", sans-serif;
-                font-size: 1rem;
-                margin-bottom: 4px;
-            }
-
-            .goal-meta {
-                font-size: 0.65rem;
-                color: #555;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-
-            .goal-unlocks {
-                color: var(--blue);
-                font-size: 0.72rem;
-                margin-top: 4px;
-                font-weight: 700;
-            }
-
-            /* XP / milestone progress bars */
-            .pbar {
-                height: 8px;
-                background: #e0e0e0;
-                border: 2px solid var(--black);
-                margin-top: 8px;
-            }
-            .pfill {
-                height: 100%;
-                transition: width 0.4s;
-            }
-
-            .goal-btns {
-                display: flex;
-                gap: 8px;
-                align-items: center;
-                margin-top: 12px;
-                flex-wrap: wrap;
-            }
-
-            /* ==========================================================================
-       BUTTONS
-       Hard shadow, physical press animation, no border-radius.
-    ========================================================================== */
-            .btn {
-                padding: 6px 14px;
-                font-family: "Archivo Black", sans-serif;
-                font-size: 0.72rem;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                cursor: pointer;
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow);
-                transition:
-                    transform 0.1s,
-                    box-shadow 0.1s;
-                outline: none;
-                background: var(--white);
-            }
-
-            .btn:hover {
-                transform: translate(-2px, -2px);
-                box-shadow: var(--shadow-lg);
-            }
-            .btn:active {
-                transform: translate(2px, 2px);
-                box-shadow: none;
-            }
-
-            .btn-amber {
-                background: var(--yellow);
-                color: var(--black);
-            }
-            .btn-green {
-                background: var(--green);
-                color: var(--black);
-                cursor: default;
-            }
-            .btn-green:hover {
-                transform: none;
-                box-shadow: var(--shadow);
-            }
-            .btn-ghost {
-                background: var(--white);
-                color: var(--black);
-            }
-
-            /* ==========================================================================
-       SUBTASK LIST (inside goal cards)
-    ========================================================================== */
-            .subs {
-                border-top: 3px solid var(--black);
-                background: #f0ebe0;
-                padding: 10px 0 12px;
-            }
-
-            .st {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 8px 16px 8px 32px;
-                cursor: pointer;
-                user-select: none;
-                transition: background 0.1s;
-                border-bottom: 1px dashed #ccc;
-            }
-
-            .st:last-of-type {
-                border-bottom: none;
-            }
-            .st:hover {
-                background: #e8e3d8;
-            }
-            .st.done {
-                background: #e0ddd5;
-            }
-            .st.done .st-lbl {
-                text-decoration: line-through;
-                color: #888;
-            }
-
-            .st-check {
-                width: 16px;
-                height: 16px;
-                flex-shrink: 0;
-                border: 2.5px solid var(--black);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 0.65rem;
-                font-weight: 900;
-                background: var(--white);
-                transition: background 0.1s;
-            }
-
-            .st.done .st-check {
-                background: var(--black);
-                color: var(--yellow);
-            }
-
-            .st-lbl {
-                font-size: 0.84rem;
-                flex: 1;
-            }
-
-            .st-del {
-                background: none;
-                border: 2px solid transparent;
-                color: #aaa;
-                cursor: pointer;
-                font-size: 0.8rem;
-                padding: 2px 6px;
-                transition: all 0.1s;
-                font-weight: 700;
-            }
-
-            .st-del:hover {
-                border-color: var(--red);
-                color: var(--red);
-            }
-
-            /* Inline "add milestone" row */
-            .st-add {
-                display: flex;
-                gap: 8px;
-                align-items: center;
-                padding: 10px 16px 4px 32px;
-            }
-
-            .st-input {
-                flex: 1;
-                background: var(--white);
-                border: 3px solid var(--black);
-                padding: 6px 10px;
-                font-family: "Space Mono", monospace;
-                font-size: 0.82rem;
-                outline: none;
-            }
-
-            .st-input:focus {
-                outline: 3px solid var(--blue);
-                outline-offset: -3px;
-            }
-
-            /* ==========================================================================
-       RESOURCE NODE CARDS
-       Top border color driven by --c (node color) set inline.
-    ========================================================================== */
-            .node-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-                gap: 14px;
-            }
-
-            .node-card {
-                background: var(--white);
-                border: 3px solid var(--black);
-                box-shadow: var(--shadow);
-                padding: 16px;
-                position: relative;
-                border-top: 8px solid var(--c);
-            }
-
-            .node-lbl {
-                font-size: 0.6rem;
-                color: #555;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-                margin-bottom: 4px;
-            }
-
-            .node-level {
-                font-family: "Archivo Black", sans-serif;
-                font-size: 1.5rem;
-                color: var(--black);
-            }
-
-            /* XP progress bar */
-            .xp-bg {
-                height: 8px;
-                background: #e0e0e0;
-                border: 2px solid var(--black);
-                margin-top: 8px;
-            }
-            .xp-fill {
-                height: 100%;
-                background: var(--c);
-                transition: width 0.5s;
-            }
-            .xp-txt {
-                font-size: 0.62rem;
-                color: #555;
-                margin-top: 4px;
-            }
-
-            /* ==========================================================================
-       HEATMAP (Nodes panel)
-       28-cell grid showing the last 4 weeks of habit completion density.
-    ========================================================================== */
-            .heatmap {
-                display: grid;
-                grid-template-columns: repeat(28, 1fr);
-                gap: 3px;
-                margin-top: 8px;
-            }
-            .hm-cell {
-                height: 20px;
-                border: 1.5px solid var(--black);
-            }
-
-            /* ==========================================================================
-       MANAGE PANEL — FORM INPUTS
-    ========================================================================== */
-            .form-row {
-                display: flex;
-                gap: 10px;
-                flex-wrap: wrap;
-                align-items: flex-end;
-                margin-bottom: 8px;
-            }
-
-            .inp {
-                background: var(--white);
-                border: 3px solid var(--black);
-                padding: 8px 12px;
-                font-family: "Space Mono", monospace;
-                font-size: 0.85rem;
-                color: var(--black);
-                outline: none;
-            }
-
-            .inp:focus {
-                outline: 3px solid var(--blue);
-                outline-offset: -3px;
-            }
-
-            .inp-label {
-                font-family: "Archivo Black", sans-serif;
-                font-size: 0.65rem;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-                display: block;
-                margin-bottom: 4px;
-            }
-
-            /* Habit/node rows in the manage list */
-            .manage-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 10px 16px;
-                background: var(--white);
-                border: 3px solid var(--black);
-                border-left: 8px solid var(--c, var(--black));
-                box-shadow: var(--shadow);
-                margin-bottom: 8px;
-            }
-
-            select.inp option {
-                background: var(--white);
-                color: var(--black);
-            }
-
-            /* ==========================================================================
-       XP FLOAT ANIMATION
-       Spawned at click position when XP is awarded.
-    ========================================================================== */
-            @keyframes xpfloat {
-                0% {
-                    opacity: 1;
-                    transform: translateY(0) scale(1.2);
-                }
-                100% {
-                    opacity: 0;
-                    transform: translateY(-55px) scale(0.9);
-                }
-            }
-
-            .xp-float {
-                position: fixed;
-                pointer-events: none;
-                z-index: 9998;
-                font-family: "Archivo Black", sans-serif;
-                font-size: 0.9rem;
-                color: var(--black);
-                background: var(--yellow);
-                border: 3px solid var(--black);
-                padding: 3px 10px;
-                animation: xpfloat 1s ease-out forwards;
-            }
-
-            /* ==========================================================================
-       TOAST NOTIFICATION
-       Appears bottom-right; color is set dynamically via JS.
-    ========================================================================== */
-            .toast {
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                background: var(--black);
-                border: 3px solid var(--yellow);
-                box-shadow: var(--shadow-lg);
-                padding: 10px 18px;
-                font-family: "Archivo Black", sans-serif;
-                font-size: 0.8rem;
-                color: var(--yellow);
-                z-index: 9997;
-                opacity: 0;
-                transition: opacity 0.25s;
-                pointer-events: none;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }
-
-            .toast.show {
-                opacity: 1;
-            }
-        </style>
-    </head>
-
-    <body>
-        <!-- ======================================================================
-       HEADER
-       Sticky bar: app title, date, live efficiency badge.
-  ====================================================================== -->
-        <header class="hdr">
-            <div>
-                <div class="hdr-title">⚙ LIFE FACTORY</div>
-                <div class="hdr-sub">personal production system</div>
-                <div class="hdr-sub" id="hdr-date"></div>
-            </div>
-            <div class="eff-badge" id="eff-badge">EFFICIENCY 0%</div>
-        </header>
-
-        <!-- ======================================================================
-       TAB BAR
-       Switches between the four main panels.
-  ====================================================================== -->
-        <nav class="tabs" role="tablist">
-            <button
-                class="tab active"
-                role="tab"
-                onclick="switchTab('factory')"
-            >
-                🏭 Factory Floor
-            </button>
-            <button class="tab" role="tab" onclick="switchTab('tech')">
-                🔬 Tech Tree
-            </button>
-            <button class="tab" role="tab" onclick="switchTab('nodes')">
-                📊 Nodes
-            </button>
-            <button class="tab" role="tab" onclick="switchTab('manage')">
-                ⚙ Manage
-            </button>
-        </nav>
-
-        <!-- ======================================================================
-       PANEL 1 — FACTORY FLOOR
-       Daily habit checklist, bottleneck alert, and today's summary stats.
-  ====================================================================== -->
-        <main class="panel active" id="panel-factory" role="tabpanel">
-            <!-- Bottleneck alert (rendered by JS) -->
-            <div id="bn-alert"></div>
-
-            <div class="sec">⚡ Production Lines — Today's Habits</div>
-            <!-- Habit cards (rendered by JS) -->
-            <div id="habit-list"></div>
-
-            <div class="sec" style="margin-top: 20px">📈 Today's Output</div>
-            <!-- Summary stat cards (rendered by JS) -->
-            <div class="sum-grid" id="summary"></div>
-        </main>
-
-        <!-- ======================================================================
-       PANEL 2 — TECH TREE
-       Goal cards with XP gates, milestone sub-lists, and inline editing.
-  ====================================================================== -->
-        <section class="panel" id="panel-tech" role="tabpanel">
-            <div class="sec">🔬 Tech Tree — Life Goals</div>
-            <p
-                style="
-                    font-family: &quot;Space Mono&quot;, monospace;
-                    font-size: 0.73rem;
-                    color: #555;
-                    margin-bottom: 16px;
-                "
-            >
-                Break goals into milestones. Complete milestones to earn XP and
-                unlock goals.
-            </p>
-            <!-- Goal cards (rendered by JS) -->
-            <div id="goal-list"></div>
-        </section>
-
-        <!-- ======================================================================
-       PANEL 3 — RESOURCE NODES
-       Node level cards and 4-week completion heatmap.
-  ====================================================================== -->
-        <section class="panel" id="panel-nodes" role="tabpanel">
-            <div class="sec">📊 Resource Nodes</div>
-            <!-- Node cards (rendered by JS) -->
-            <div class="node-grid" id="node-grid"></div>
-
-            <div class="sec" style="margin-top: 22px">
-                📅 Heatmap — Last 4 Weeks
-            </div>
-            <!-- Heatmap grid (rendered by JS) -->
-            <div class="heatmap" id="heatmap"></div>
-            <p
-                style="
-                    font-family: &quot;Space Mono&quot;, monospace;
-                    font-size: 0.62rem;
-                    color: #555;
-                    margin-top: 5px;
-                "
-            >
-                ← 4 weeks ago &nbsp;·&nbsp; today →
-            </p>
-        </section>
-
-        <!-- ======================================================================
-       PANEL 4 — MANAGE
-       Add/remove habits, goals, and custom nodes.
-  ====================================================================== -->
-        <section class="panel" id="panel-manage" role="tabpanel">
-            <!-- ADD HABIT --------------------------------------------------------- -->
-            <div class="sec">➕ Add Habit</div>
-            <div class="form-row">
-                <div>
-                    <label class="inp-label" for="h-name">Habit Name</label>
-                    <input
-                        class="inp"
-                        id="h-name"
-                        placeholder="e.g. Morning workout"
-                        style="width: 220px"
-                    />
-                </div>
-                <div>
-                    <label class="inp-label" for="h-node">Node</label>
-                    <select class="inp" id="h-node">
-                        <option value="health">❤️ Health</option>
-                        <option value="mind">🧠 Mind</option>
-                        <option value="work">⚙️ Work</option>
-                        <option value="social">🤝 Social</option>
-                        <option value="finance">💰 Finance</option>
-                    </select>
-                </div>
-                <div style="display: flex; align-items: flex-end">
-                    <button class="btn btn-amber" onclick="addHabit()">
-                        + ADD
-                    </button>
-                </div>
-            </div>
-
-            <!-- MANAGE HABITS ----------------------------------------------------- -->
-            <div class="sec" style="margin-top: 20px">🗑 Manage Habits</div>
-            <!-- Habit rows (rendered by JS) -->
-            <div id="manage-habits"></div>
-
-            <!-- ADD GOAL ---------------------------------------------------------- -->
-            <div class="sec" style="margin-top: 20px">➕ Add Goal</div>
-            <div class="form-row">
-                <div>
-                    <label class="inp-label" for="g-label">Goal Label</label>
-                    <input
-                        class="inp"
-                        id="g-label"
-                        placeholder="e.g. Read 5 books"
-                        style="width: 220px"
-                    />
-                </div>
-                <div>
-                    <label class="inp-label" for="g-node">Node</label>
-                    <select class="inp" id="g-node">
-                        <option value="health">❤️ Health</option>
-                        <option value="mind">🧠 Mind</option>
-                        <option value="work" selected>⚙️ Work</option>
-                        <option value="social">🤝 Social</option>
-                        <option value="finance">💰 Finance</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="inp-label" for="g-xp">XP Cost</label>
-                    <input
-                        class="inp"
-                        id="g-xp"
-                        type="number"
-                        value="200"
-                        min="50"
-                        max="5000"
-                        style="width: 100px"
-                    />
-                </div>
-                <div>
-                    <label class="inp-label" for="g-unlocks"
-                        >Unlocks (optional)</label
-                    >
-                    <input
-                        class="inp"
-                        id="g-unlocks"
-                        placeholder="Next goal..."
-                        style="width: 200px"
-                    />
-                </div>
-                <div style="display: flex; align-items: flex-end">
-                    <button class="btn btn-amber" onclick="addGoal()">
-                        + ADD
-                    </button>
-                </div>
-            </div>
-
-            <!-- ADD CUSTOM NODE --------------------------------------------------- -->
-            <div class="sec" style="margin-top: 28px">🧩 Add Custom Node</div>
-            <div class="form-row">
-                <div>
-                    <label class="inp-label" for="n-label">Node Name</label>
-                    <input
-                        class="inp"
-                        id="n-label"
-                        placeholder="e.g. Creativity"
-                        style="width: 180px"
-                    />
-                </div>
-                <div>
-                    <label class="inp-label" for="n-icon">Icon (emoji)</label>
-                    <input
-                        class="inp"
-                        id="n-icon"
-                        placeholder="🎨"
-                        style="
-                            width: 70px;
-                            text-align: center;
-                            font-size: 1.2rem;
-                        "
-                        maxlength="2"
-                    />
-                </div>
-                <div>
-                    <label class="inp-label" for="n-color">Color</label>
-                    <input
-                        class="inp"
-                        id="n-color"
-                        type="color"
-                        value="#ff2d78"
-                        style="
-                            width: 60px;
-                            height: 42px;
-                            padding: 2px;
-                            cursor: pointer;
-                        "
-                    />
-                </div>
-                <div style="display: flex; align-items: flex-end">
-                    <button class="btn btn-amber" onclick="addNode()">
-                        + ADD NODE
-                    </button>
-                </div>
-            </div>
-
-            <!-- MANAGE NODES ------------------------------------------------------ -->
-            <div class="sec" style="margin-top: 20px">🧩 Manage Nodes</div>
-            <!-- Node rows (rendered by JS) -->
-            <div id="manage-nodes"></div>
-        </section>
-
-        <!-- ======================================================================
-       TOAST NOTIFICATION (singleton, shown/hidden via JS)
-  ====================================================================== -->
-        <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-        <script>
-            // =============================================================================
-            // LIFE FACTORY — Main Application Script
-            // =============================================================================
-            // Sections:
-            //   1. Constants & Configuration
-            //   2. Application State
-            //   3. XP & Level Utilities
-            //   4. Date & Streak Utilities
-            //   5. Stats Utilities
-            //   6. UI Utilities (toast, xpFloat, tabs)
-            //   7. Render: Header
-            //   8. Render: Factory Floor (habits + summary)
-            //   9. Render: Tech Tree (goals + subtasks)
-            //  10. Render: Resource Nodes + Heatmap
-            //  11. Render: Manage Panel
-            //  12. Actions: Habits
-            //  13. Actions: Goals
-            //  14. Actions: Subtasks
-            //  15. Actions: Nodes
-            //  16. Initialisation
-            // =============================================================================
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 1. CONSTANTS & CONFIGURATION
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /** XP awarded per habit completion */
-            const HABIT_XP = 25;
-
-            /** XP awarded per subtask/milestone completion */
-            const TASK_XP = 15;
-
-            /** XP required to advance one level (multiplied by current level) */
-            const XP_PER_LEVEL = 100;
-
-            /** Node keys that ship with the app and cannot be deleted */
-            const BUILT_IN_NODES = [
-                "health",
-                "mind",
-                "work",
-                "social",
-                "finance",
-            ];
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 2. APPLICATION STATE
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * @typedef {Object} Node
-             * @property {string} label   - Display name (e.g. "Health")
-             * @property {string} icon    - Emoji icon (e.g. "❤️")
-             * @property {string} color   - CSS hex color
-             * @property {number} xp      - Accumulated XP
-             * @property {number} level   - Current level (derived from xp)
-             */
-
-            /**
-             * @typedef {Object} Habit
-             * @property {number} id    - Unique identifier
-             * @property {string} name  - Habit description
-             * @property {string} node  - Key of the associated Node
-             */
-
-            /**
-             * @typedef {Object} Subtask
-             * @property {number}  id    - Unique identifier
-             * @property {string}  label - Milestone description
-             * @property {boolean} done  - Whether this milestone is completed
-             */
-
-            /**
-             * @typedef {Object} Goal
-             * @property {number}    id        - Unique identifier
-             * @property {string}    label     - Goal description
-             * @property {string}    node      - Key of the associated Node
-             * @property {number}    xp_cost   - XP required on the node to unlock this goal
-             * @property {string|null} unlocks - Text describing what this goal leads to
-             * @property {boolean}   completed - Whether this goal has been researched
-             * @property {Subtask[]} subtasks  - List of milestones for this goal
-             */
-
-            /**
-             * @typedef {Object} AppState
-             * @property {Object.<string, Node>} nodes       - Map of node key → Node
-             * @property {Habit[]}               habits      - List of daily habits
-             * @property {Goal[]}                goals       - List of tech-tree goals
-             * @property {Object.<string, number[]>} completions - Map of date string → completed habit IDs
-             * @property {number} nextHabitId  - Auto-increment counter for habit IDs
-             * @property {number} nextGoalId   - Auto-increment counter for goal IDs
-             * @property {number} nextTaskId   - Auto-increment counter for subtask IDs
-             */
-
-            /** @type {AppState} */
-            const state = {
-                nodes: {
-                    health: {
-                        label: "Health",
-                        icon: "❤️",
-                        color: "#e05c5c",
-                        xp: 0,
-                        level: 1,
-                    },
-                    mind: {
-                        label: "Mind",
-                        icon: "🧠",
-                        color: "#7c6af7",
-                        xp: 0,
-                        level: 1,
-                    },
-                    work: {
-                        label: "Work",
-                        icon: "⚙️",
-                        color: "#f0a500",
-                        xp: 0,
-                        level: 1,
-                    },
-                    social: {
-                        label: "Social",
-                        icon: "🤝",
-                        color: "#4ec9b0",
-                        xp: 0,
-                        level: 1,
-                    },
-                    finance: {
-                        label: "Finance",
-                        icon: "💰",
-                        color: "#5cb85c",
-                        xp: 0,
-                        level: 1,
-                    },
-                },
-                habits: [
-                    { id: 1, name: "Morning workout", node: "health" },
-                    { id: 2, name: "Read 20 mins", node: "mind" },
-                    { id: 3, name: "Deep work block (90m)", node: "work" },
-                    { id: 4, name: "Drink 2L water", node: "health" },
-                    { id: 5, name: "Reach out to someone", node: "social" },
-                    { id: 6, name: "Log expenses", node: "finance" },
-                ],
-                goals: [
-                    {
-                        id: 1,
-                        label: "Complete 7-day streak",
-                        node: "health",
-                        xp_cost: 200,
-                        unlocks: "Run a 5K",
-                        completed: false,
-                        subtasks: [
-                            {
-                                id: 1,
-                                label: "Track workout 3 days straight",
-                                done: false,
-                            },
-                            {
-                                id: 2,
-                                label: "Establish a morning routine",
-                                done: false,
-                            },
-                            {
-                                id: 3,
-                                label: "Hit the full 7-day streak",
-                                done: false,
-                            },
-                        ],
-                    },
-                    {
-                        id: 2,
-                        label: "Read 5 books",
-                        node: "mind",
-                        xp_cost: 300,
-                        unlocks: "Start a writing habit",
-                        completed: false,
-                        subtasks: [
-                            { id: 4, label: "Finish first book", done: false },
-                            {
-                                id: 5,
-                                label: "Summarise learnings",
-                                done: false,
-                            },
-                            { id: 6, label: "Read 3 more books", done: false },
-                        ],
-                    },
-                    {
-                        id: 3,
-                        label: "30 deep work sessions",
-                        node: "work",
-                        xp_cost: 500,
-                        unlocks: "Launch a side project",
-                        completed: false,
-                        subtasks: [
-                            {
-                                id: 7,
-                                label: "Define deep work schedule",
-                                done: false,
-                            },
-                            {
-                                id: 8,
-                                label: "Complete 10 sessions",
-                                done: false,
-                            },
-                            {
-                                id: 9,
-                                label: "Complete 20 sessions",
-                                done: false,
-                            },
-                            {
-                                id: 10,
-                                label: "Hit 30 — reflect & refine",
-                                done: false,
-                            },
-                        ],
-                    },
-                    {
-                        id: 4,
-                        label: "Save 1 month expenses",
-                        node: "finance",
-                        xp_cost: 400,
-                        unlocks: "Invest surplus",
-                        completed: false,
-                        subtasks: [
-                            {
-                                id: 11,
-                                label: "Audit monthly spending",
-                                done: false,
-                            },
-                            {
-                                id: 12,
-                                label: "Identify 3 areas to cut",
-                                done: false,
-                            },
-                            {
-                                id: 13,
-                                label: "Build 2-week savings buffer",
-                                done: false,
-                            },
-                            {
-                                id: 14,
-                                label: "Reach full 1-month goal",
-                                done: false,
-                            },
-                        ],
-                    },
-                ],
-                completions: {},
-                nextHabitId: 7,
-                nextGoalId: 5,
-                nextTaskId: 15,
-            };
-
-            /** Set of goal IDs whose subtask list is currently expanded */
-            const expandedGoals = new Set();
-
-            /** ID of the goal currently in edit mode, or null */
-            let editingGoal = null;
-
-            /** ID of the goal pending delete confirmation, or null */
-            let deleteGoalPending = null;
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 3. XP & LEVEL UTILITIES
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Returns the XP required to complete a given level.
-             * @param {number} level
-             * @returns {number}
-             */
-            function xpForLevel(level) {
-                return XP_PER_LEVEL * level;
-            }
-
-            /**
-             * Derives the current level from a raw XP total.
-             * @param {number} xp
-             * @returns {number}
-             */
-            function levelFromXp(xp) {
-                let lv = 1,
-                    acc = 0;
-                while (true) {
-                    const needed = xpForLevel(lv);
-                    if (xp < acc + needed) return lv;
-                    acc += needed;
-                    lv++;
-                }
-            }
-
-            /**
-             * Returns XP accumulated within the current level (i.e. progress toward next level).
-             * @param {number} xp   - Total XP
-             * @param {number} level - Current level
-             * @returns {number}
-             */
-            function xpInLevel(xp, level) {
-                let spent = 0;
-                for (let l = 1; l < level; l++) spent += xpForLevel(l);
-                return xp - spent;
-            }
-
-            /**
-             * Adds XP to a node and recalculates its level.
-             * @param {string} nodeKey - Key of the node to award XP to
-             * @param {number} amount  - Amount of XP to add
-             */
-            function addXp(nodeKey, amount) {
-                state.nodes[nodeKey].xp += amount;
-                state.nodes[nodeKey].level = levelFromXp(
-                    state.nodes[nodeKey].xp,
-                );
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 4. DATE & STREAK UTILITIES
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Returns today's date as an ISO string (YYYY-MM-DD).
-             * @returns {string}
-             */
-            function todayStr() {
-                return new Date().toISOString().slice(0, 10);
-            }
-
-            /**
-             * Calculates the current consecutive-day streak for a habit.
-             * Counts backwards from today, stopping at the first day the habit was not completed.
-             * @param {number} habitId
-             * @returns {number}
-             */
-            function streak(habitId) {
-                let n = 0;
-                const d = new Date();
-                while (true) {
-                    const k = d.toISOString().slice(0, 10);
-                    if (
-                        state.completions[k] &&
-                        state.completions[k].includes(habitId)
-                    ) {
-                        n++;
-                        d.setDate(d.getDate() - 1);
-                    } else {
-                        break;
-                    }
-                }
-                return n;
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 5. STATS UTILITIES
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Returns today's completion rate as a percentage (0–100).
-             * @returns {number}
-             */
-            function efficiency() {
-                if (!state.habits.length) return 0;
-                const done = (state.completions[todayStr()] || []).length;
-                return Math.round((done / state.habits.length) * 100 * 10) / 10;
-            }
-
-            /**
-             * Returns the node with the lowest level (the production bottleneck).
-             * @returns {[string, Node]} Tuple of [nodeKey, node]
-             */
-            function bottleneck() {
-                return Object.entries(state.nodes).sort(
-                    (a, b) => a[1].level - b[1].level,
-                )[0];
-            }
-
-            /**
-             * Returns a CSS color string based on efficiency score.
-             * @param {number} e - Efficiency percentage
-             * @returns {string}
-             */
-            function effColor(e) {
-                return e >= 80 ? "#00c853" : e >= 40 ? "#0a0a0a" : "#FF3B3B";
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 6. UI UTILITIES
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Shows a temporary toast notification.
-             * @param {string} msg   - Message to display
-             * @param {string} color - Border/text color (CSS color string)
-             */
-            function toast(msg, color = "#FFE500") {
-                const t = document.getElementById("toast");
-                t.textContent = msg;
-                t.style.borderColor = color;
-                t.style.color = color;
-                t.classList.add("show");
-                setTimeout(() => t.classList.remove("show"), 2200);
-            }
-
-            /**
-             * Spawns a floating "+XP" label at the given screen coordinates.
-             * @param {number} x    - clientX position
-             * @param {number} y    - clientY position
-             * @param {string} text - Label text (e.g. "+25 XP")
-             */
-            function xpFloat(x, y, text) {
-                const el = document.createElement("div");
-                el.className = "xp-float";
-                el.textContent = text;
-                el.style.left = x + "px";
-                el.style.top = y + "px";
-                document.body.appendChild(el);
-                setTimeout(() => el.remove(), 1200);
-            }
-
-            /**
-             * Switches the visible tab panel.
-             * Also triggers renderNodes() when switching to the Nodes tab to keep data fresh.
-             * @param {string} id - Panel ID suffix ('factory' | 'tech' | 'nodes' | 'manage')
-             */
-            function switchTab(id) {
-                document
-                    .querySelectorAll(".tab")
-                    .forEach((b) => b.classList.remove("active"));
-                document
-                    .querySelectorAll(".panel")
-                    .forEach((p) => p.classList.remove("active"));
-                event.target.classList.add("active");
-                document.getElementById("panel-" + id).classList.add("active");
-                if (id === "nodes") renderNodes();
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 7. RENDER: HEADER
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Updates the sticky header: efficiency badge color and today's date string.
-             */
-            function renderHeader() {
-                const e = efficiency();
-                const ec = effColor(e);
-                const badge = document.getElementById("eff-badge");
-                badge.textContent = `EFFICIENCY  ${e}%`;
-                const bg =
-                    e >= 80 ? "#00c853" : e >= 40 ? "#FFE500" : "#FF3B3B";
-                const fg =
-                    e >= 80 ? "#0a0a0a" : e >= 40 ? "#0a0a0a" : "#f5f0e8";
-                badge.style.background = bg;
-                badge.style.color = fg;
-
-                const days = [
-                    "Sunday",
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                ];
-                const months = [
-                    "Jan",
-                    "Feb",
-                    "Mar",
-                    "Apr",
-                    "May",
-                    "Jun",
-                    "Jul",
-                    "Aug",
-                    "Sep",
-                    "Oct",
-                    "Nov",
-                    "Dec",
-                ];
-                const now = new Date();
-                document.getElementById("hdr-date").textContent =
-                    `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, "0")} ${months[now.getMonth()]} ${now.getFullYear()}`;
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 8. RENDER: FACTORY FLOOR
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Re-renders the entire Factory Floor panel:
-             * bottleneck alert, habit cards, and today's output summary.
-             */
-            function renderFactory() {
-                renderHeader();
-                _renderBottleneck();
-                _renderHabitList();
-                _renderSummary();
-            }
-
-            /**
-             * @private
-             * Renders the bottleneck warning banner.
-             */
-            function _renderBottleneck() {
-                const [, bnd] = bottleneck();
-                document.getElementById("bn-alert").innerHTML =
-                    `<div class="bn">
-      <span class="pulse">⚠</span>
-      BOTTLENECK — <strong style="color:#fff">${bnd.icon} ${bnd.label}</strong>
-      is your lowest node (Lv.${bnd.level}). Focus here to unlock progress.
-    </div>`;
-            }
-
-            /**
-             * @private
-             * Renders the list of daily habit cards.
-             */
-            function _renderHabitList() {
-                const today = todayStr();
-                const done = state.completions[today] || [];
-                let html = "";
-
-                for (const h of state.habits) {
-                    const nd = state.nodes[h.node];
-                    const isDone = done.includes(h.id);
-                    const st = streak(h.id);
-                    html += `
-      <div class="habit${isDone ? " done" : ""}" style="--c:${nd.color}" onclick="toggleHabit(${h.id}, event)">
-        <div class="hcheck">${isDone ? "✓" : ""}</div>
-        <div class="hname">${h.name}</div>
-        <div class="htag">${nd.icon} ${nd.label}</div>
-        <div class="hstreak${st ? "" : " z"}">${st ? "🔥 " + st + "d" : "0d"}</div>
-      </div>`;
-                }
-
-                document.getElementById("habit-list").innerHTML =
-                    html ||
-                    '<div style="color:#888;font-family:Space Mono,monospace;font-size:.8rem">No habits yet — add some in Manage.</div>';
-            }
-
-            /**
-             * @private
-             * Renders the three summary stat cards (completed, efficiency, best streak).
-             */
-            function _renderSummary() {
-                const today = todayStr();
-                const done = (state.completions[today] || []).length;
-                const total = state.habits.length;
-                const best = state.habits.length
-                    ? Math.max(...state.habits.map((h) => streak(h.id)))
-                    : 0;
-                const e = efficiency();
-                const ec = effColor(e);
-                document.getElementById("summary").innerHTML = `
-    <div class="sum-card">
-      <div class="sum-lbl">COMPLETED</div>
-      <div class="sum-val" style="color:#00c853">${done}/${total}</div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚙ LIFE FACTORY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Archivo+Black&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="chocolate_factory.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div>
+      <div class="hdr-title">⚙ LIFE FACTORY</div>
+      <div class="hdr-sub">personal development system</div>
+      <div class="hdr-sub" id="hdr-date"></div>
     </div>
-    <div class="sum-card">
-      <div class="sum-lbl">EFFICIENCY</div>
-      <div class="sum-val" style="color:${ec}">${e}%</div>
-    </div>
-    <div class="sum-card">
-      <div class="sum-lbl">BEST STREAK</div>
-      <div class="sum-val" style="color:#1a1aff">${best}d</div>
-    </div>`;
-            }
+    <div class="eff-badge" id="eff-badge">EFFICIENCY 0%</div>
+  </header>
 
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 9. RENDER: TECH TREE
-            // ─────────────────────────────────────────────────────────────────────────────
+  <!-- TAB BAR -->
+  <nav class="tabs" role="tablist">
+    <button class="tab active" role="tab" data-panel="factory">🏭 Systems</button>
+    <button class="tab"        role="tab" data-panel="focus">⏱ Deep Work</button>
+    <button class="tab"        role="tab" data-panel="lab">🧪 Lab</button>
+    <button class="tab"        role="tab" data-panel="tech">🔬 Goals</button>
+    <button class="tab"        role="tab" data-panel="nodes">📊 Nodes</button>
+    <button class="tab"        role="tab" data-panel="manage">⚙ Manage</button>
+  </nav>
 
-            /**
-             * Re-renders all goal cards in the Tech Tree panel.
-             * Handles XP progress bars, milestone bars, edit forms, and subtask lists.
-             */
-            function renderGoals() {
-                let html = "";
+  <!-- PANEL 1: SYSTEMS -->
+  <main class="panel active" id="panel-factory" role="tabpanel">
+    <div id="identity-bar"></div>
+    <div id="focus-node-alert"></div>
+    <div class="sec">⚡ Today's Systems</div>
+    <div id="habit-list"></div>
+    <div class="sec" style="margin-top:20px">📈 Today's Output</div>
+    <div class="sum-grid" id="summary"></div>
+  </main>
 
-                for (const g of state.goals) {
-                    const nd = state.nodes[g.node];
-                    const color = nd.color;
-                    const nodeXp = nd.xp;
-                    const fracXp = Math.min(
-                        100,
-                        (nodeXp / g.xp_cost) * 100,
-                    ).toFixed(1);
-                    const doneT = g.subtasks.filter((t) => t.done).length;
-                    const totalT = g.subtasks.length;
-                    const fracT = totalT
-                        ? ((doneT / totalT) * 100).toFixed(1)
-                        : 0;
-                    const canRes = nodeXp >= g.xp_cost && !g.completed;
-                    const isExp = expandedGoals.has(g.id);
-                    const isEditing = editingGoal === g.id;
+  <!-- PANEL 2: DEEP WORK TIMER -->
+  <section class="panel" id="panel-focus" role="tabpanel">
+    <div class="sec">⏱ Deep Work Session</div>
+    <p class="hint">Longer sessions earn bonus XP. No multitasking — one node, full focus.</p>
 
-                    const badge = g.completed
-                        ? `<span style="background:#00c853;color:#0a0a0a;font-family:'Archivo Black',sans-serif;font-size:.67rem;padding:2px 8px;border:2px solid #0a0a0a">✓ DONE</span>`
-                        : canRes
-                          ? `<span style="background:#FFE500;color:#0a0a0a;font-family:'Archivo Black',sans-serif;font-size:.67rem;padding:2px 8px;border:2px solid #0a0a0a">◈ READY</span>`
-                          : `<span style="background:#e8e3d8;color:#555;font-family:'Space Mono',monospace;font-size:.67rem;padding:2px 8px;border:2px solid #ccc">${nodeXp}/${g.xp_cost} XP</span>`;
-
-                    const unlocksHtml = g.unlocks
-                        ? `<div class="goal-unlocks">→ Unlocks: ${g.unlocks}</div>`
-                        : "";
-
-                    const milBar = totalT
-                        ? `
-      <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:#555;text-transform:uppercase;margin-top:6px;margin-bottom:2px">
-        MILESTONES <span style="color:#00c853;font-weight:700">${doneT}</span>/${totalT}
+    <div class="focus-setup" id="focus-setup">
+      <div class="form-row">
+        <div>
+          <label class="inp-label" for="focus-node">Node</label>
+          <select class="inp" id="focus-node"></select>
+        </div>
+        <div>
+          <label class="inp-label" for="focus-task">What are you working on?</label>
+          <input class="inp" id="focus-task" placeholder="e.g. Write chapter 3" style="width:280px">
+        </div>
       </div>
-      <div class="pbar"><div class="pfill" style="width:${fracT}%;background:#00c853"></div></div>`
-                        : "";
+      <div class="focus-presets">
+        <button class="btn btn-ghost focus-preset" data-mins="25">25 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="50">50 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="90">90 min</button>
+        <button class="btn btn-ghost focus-preset" data-mins="120">2 hr</button>
+        <input class="inp" id="focus-custom-mins" type="number" min="5" max="480" placeholder="custom min" style="width:110px">
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-amber" id="btn-start-focus" style="font-size:.9rem;padding:10px 28px">▶ START SESSION</button>
+      </div>
+    </div>
 
-                    const resBtn = canRes
-                        ? `<button class="btn btn-amber" onclick="researchGoal(${g.id})">RESEARCH</button>`
-                        : g.completed
-                          ? `<div class="btn btn-green">COMPLETE ✓</div>`
-                          : "";
-
-                    // Build node options for the inline edit select
-                    const nodeOpts = Object.entries(state.nodes)
-                        .map(
-                            ([k, nd2]) =>
-                                `<option value="${k}" ${k === g.node ? "selected" : ""}>${nd2.icon} ${nd2.label}</option>`,
-                        )
-                        .join("");
-
-                    const editForm = isEditing
-                        ? `
-      <div style="background:#f0ebe0;border-top:3px solid #0a0a0a;padding:14px;display:flex;flex-direction:column;gap:10px">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-          <div>
-            <label class="inp-label">Goal Label</label>
-            <input class="inp" id="eg-label-${g.id}" value="${g.label.replace(/"/g, "&quot;")}" style="width:200px">
-          </div>
-          <div>
-            <label class="inp-label">Node</label>
-            <select class="inp" id="eg-node-${g.id}">${nodeOpts}</select>
-          </div>
-          <div>
-            <label class="inp-label">XP Cost</label>
-            <input class="inp" id="eg-xp-${g.id}" type="number" value="${g.xp_cost}" min="50" max="9999" style="width:90px">
-          </div>
-          <div>
-            <label class="inp-label">Unlocks</label>
-            <input class="inp" id="eg-unlocks-${g.id}" value="${(g.unlocks || "").replace(/"/g, "&quot;")}" placeholder="Next goal…" style="width:180px">
-          </div>
+    <div class="focus-active" id="focus-active" style="display:none">
+      <div class="focus-timer-card">
+        <div class="focus-node-label" id="focus-active-node"></div>
+        <div class="focus-task-label" id="focus-active-task"></div>
+        <div class="focus-clock" id="focus-clock">00:00</div>
+        <div class="focus-xp-preview" id="focus-xp-preview"></div>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:18px">
+          <button class="btn btn-amber" id="btn-end-focus" style="font-size:.9rem;padding:10px 28px">✓ COMPLETE SESSION</button>
+          <button class="btn btn-ghost" id="btn-abort-focus">✕ ABANDON</button>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-amber" onclick="saveGoalEdit(${g.id})">✓ SAVE</button>
-          <button class="btn btn-ghost" onclick="cancelGoalEdit()">✕ CANCEL</button>
-          <button class="btn" style="background:#FF3B3B;color:#f5f0e8;border-color:#0a0a0a;margin-left:auto"
-            onclick="deleteGoal(${g.id})">🗑 DELETE GOAL</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:28px">📋 Session History</div>
+    <div id="focus-log"></div>
+  </section>
+
+  <!-- PANEL 3: LAB -->
+  <section class="panel" id="panel-lab" role="tabpanel">
+    <div class="sec">🧪 Experiment Lab</div>
+    <p class="hint">Real progress requires trying, failing, and adjusting. Log every experiment — wins and losses.</p>
+
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="lab-goal">Goal</label>
+        <select class="inp" id="lab-goal" style="width:200px"></select>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="lab-what">What did you try?</label>
+        <input class="inp" id="lab-what" placeholder="Describe the experiment…" style="width:100%">
+      </div>
+      <div>
+        <label class="inp-label" for="lab-outcome">Outcome</label>
+        <select class="inp" id="lab-outcome" style="width:130px">
+          <option value="win">✅ Win</option>
+          <option value="partial">⚡ Partial</option>
+          <option value="fail">❌ Fail</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:4px">
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="lab-insight">Key insight / what to adjust</label>
+        <input class="inp" id="lab-insight" placeholder="What did you learn?" style="width:100%">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-experiment">+ LOG EXPERIMENT</button>
+      </div>
+    </div>
+
+    <div class="sec" style="margin-top:24px">📊 Experiment Log</div>
+    <div id="lab-log"></div>
+  </section>
+
+  <!-- PANEL 4: GOALS -->
+  <section class="panel" id="panel-tech" role="tabpanel">
+    <div class="sec">🔬 Goal Systems</div>
+    <p class="hint">Break goals into milestones. Complete milestones to earn XP and unlock next goals.</p>
+    <div id="goal-list"></div>
+  </section>
+
+  <!-- PANEL 5: NODES -->
+  <section class="panel" id="panel-nodes" role="tabpanel">
+    <div class="sec">📊 Resource Nodes</div>
+    <p class="hint">Your identity statements keep you anchored when motivation fades.</p>
+    <div class="node-grid" id="node-grid"></div>
+    <div class="sec" style="margin-top:22px">📅 Completion Heatmap — Last 4 Weeks</div>
+    <div class="heatmap" id="heatmap"></div>
+    <p class="hint" style="margin-top:5px">← 4 weeks ago · today →</p>
+  </section>
+
+  <!-- PANEL 6: MANAGE -->
+  <section class="panel" id="panel-manage" role="tabpanel">
+
+    <div class="sec">➕ Add Habit</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="h-name">Habit Name</label>
+        <input class="inp" id="h-name" placeholder="e.g. Morning workout" style="width:200px">
+      </div>
+      <div>
+        <label class="inp-label" for="h-node">Node</label>
+        <select class="inp" id="h-node"></select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-time">Time of Day</label>
+        <select class="inp" id="h-time" style="width:140px">
+          <option value="anytime">⏰ Anytime</option>
+          <option value="morning">🌅 Morning</option>
+          <option value="afternoon">☀️ Afternoon</option>
+          <option value="evening">🌙 Evening</option>
+        </select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-priority">Priority</label>
+        <select class="inp" id="h-priority" style="width:120px">
+          <option value="medium">— Medium</option>
+          <option value="high">▲ High</option>
+          <option value="low">▼ Low</option>
+        </select>
+      </div>
+      <div>
+        <label class="inp-label" for="h-xp">XP Value</label>
+        <input class="inp" id="h-xp" type="number" value="25" min="1" max="200" style="width:80px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px">
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="h-notes">Notes (optional)</label>
+        <input class="inp" id="h-notes" placeholder="Extra context…" style="width:100%">
+      </div>
+      <div>
+        <label class="inp-label" for="h-qty-target">Qty Target</label>
+        <input class="inp" id="h-qty-target" type="number" min="1" placeholder="e.g. 8" style="width:90px">
+      </div>
+      <div>
+        <label class="inp-label" for="h-qty-unit">Unit</label>
+        <input class="inp" id="h-qty-unit" placeholder="glasses" style="width:100px">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:6px;align-items:flex-start">
+      <div>
+        <label class="inp-label">Schedule (days active)</label>
+        <div class="day-picker" id="h-days">
+          <button type="button" class="day-btn active" data-day="0">SUN</button>
+          <button type="button" class="day-btn active" data-day="1">MON</button>
+          <button type="button" class="day-btn active" data-day="2">TUE</button>
+          <button type="button" class="day-btn active" data-day="3">WED</button>
+          <button type="button" class="day-btn active" data-day="4">THU</button>
+          <button type="button" class="day-btn active" data-day="5">FRI</button>
+          <button type="button" class="day-btn active" data-day="6">SAT</button>
         </div>
-      </div>`
-                        : "";
+      </div>
+      <div class="form-end" style="margin-left:auto">
+        <button class="btn btn-amber" id="btn-add-habit">+ ADD HABIT</button>
+      </div>
+    </div>
 
-                    // Subtask rows
-                    let stRows = "";
-                    if (isExp) {
-                        for (const t of g.subtasks) {
-                            stRows += `
-          <div style="display:flex;align-items:center;margin-left:10px;border-left:2px dashed #ccc">
-            <div class="st${t.done ? " done" : ""}" style="--c:${color};flex:1;border:none;margin:0"
-              onclick="toggleTask(${g.id}, ${t.id})">
-              <div class="st-check">${t.done ? "✓" : ""}</div>
-              <div class="st-lbl">${t.label}</div>
-            </div>
-            <button class="st-del" onclick="deleteTask(${g.id}, ${t.id})">✕</button>
-          </div>`;
-                        }
-                    }
+    <div class="sec" style="margin-top:20px">🗑 Manage Habits</div>
+    <div id="manage-habits"></div>
 
-                    const subsHtml = isExp
-                        ? `
-      <div class="subs">
-        ${stRows || '<div style="padding:6px 16px 4px 32px;font-family:Space Mono,monospace;font-size:.7rem;color:#888">No milestones yet.</div>'}
-        <div class="st-add">
-          <input class="st-input" id="ti-${g.id}" placeholder="Add milestone…"
-            onkeydown="if(event.key==='Enter') addTask(${g.id})">
-          <button class="btn btn-amber" onclick="addTask(${g.id})">+ ADD</button>
-        </div>
-      </div>`
-                        : "";
+    <div class="sec" style="margin-top:20px">➕ Add Goal</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="g-label">Goal Label</label>
+        <input class="inp" id="g-label" placeholder="e.g. Read 5 books">
+      </div>
+      <div>
+        <label class="inp-label" for="g-node">Node</label>
+        <select class="inp" id="g-node"></select>
+      </div>
+      <div>
+        <label class="inp-label" for="g-xp">XP Cost</label>
+        <input class="inp" id="g-xp" type="number" value="200" min="50" max="5000" style="width:100px">
+      </div>
+      <div>
+        <label class="inp-label" for="g-unlocks">Unlocks (optional)</label>
+        <input class="inp" id="g-unlocks" placeholder="Next goal...">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-goal">+ ADD</button>
+      </div>
+    </div>
 
-                    html += `
-      <div class="goal" style="--c:${color};opacity:${g.completed && !isEditing ? "0.65" : "1"}">
-        <div class="goal-head">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px">
-            <div class="goal-title">${nd.icon} ${g.label}</div>
-            ${badge}
-          </div>
-          <div class="goal-meta">${nd.label.toUpperCase()} · ${g.xp_cost} XP REQUIRED</div>
-          ${unlocksHtml}
-          <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:#555;text-transform:uppercase;margin-top:7px;margin-bottom:2px">XP PROGRESS</div>
-          <div class="pbar"><div class="pfill" style="width:${fracXp}%;background:${color}"></div></div>
-          ${milBar}
-          <div class="goal-btns">
-            ${resBtn}
-            <button class="btn btn-ghost" onclick="toggleExpand(${g.id})">
-              ${isExp ? "▾ HIDE" : "▸ MILESTONES (" + totalT + ")"}
-            </button>
-            <button class="btn btn-ghost" onclick="startGoalEdit(${g.id})" style="margin-left:auto">✏ EDIT</button>
-          </div>
-        </div>
-        ${editForm}
-        ${subsHtml}
-      </div>`;
-                }
+    <div class="sec" style="margin-top:28px">🧩 Add Custom Node</div>
+    <div class="form-row">
+      <div>
+        <label class="inp-label" for="n-label">Node Name</label>
+        <input class="inp" id="n-label" placeholder="e.g. Creativity" style="width:180px">
+      </div>
+      <div>
+        <label class="inp-label" for="n-icon">Icon (emoji)</label>
+        <input class="inp" id="n-icon" placeholder="🎨" style="width:70px;text-align:center;font-size:1.2rem" maxlength="2">
+      </div>
+      <div>
+        <label class="inp-label" for="n-color">Color</label>
+        <input class="inp" id="n-color" type="color" value="#ff2d78" style="width:60px;height:42px;padding:2px;cursor:pointer">
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label class="inp-label" for="n-identity">Identity Statement</label>
+        <input class="inp" id="n-identity" placeholder="I am someone who…" style="width:100%">
+      </div>
+      <div class="form-end">
+        <button class="btn btn-amber" id="btn-add-node">+ ADD NODE</button>
+      </div>
+    </div>
 
-                document.getElementById("goal-list").innerHTML =
-                    html ||
-                    '<div style="color:#888;font-family:Space Mono,monospace;font-size:.8rem">No goals yet — add some in Manage.</div>';
-            }
+    <div class="sec" style="margin-top:20px">🧩 Manage Nodes</div>
+    <div id="manage-nodes"></div>
 
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 10. RENDER: RESOURCE NODES + HEATMAP
-            // ─────────────────────────────────────────────────────────────────────────────
+  </section>
 
-            /**
-             * Re-renders the node grid cards and the 4-week completion heatmap.
-             */
-            function renderNodes() {
-                _renderNodeGrid();
-                _renderHeatmap();
-            }
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-            /**
-             * @private
-             * Renders each node as a card showing level, XP bar, and totals.
-             */
-            function _renderNodeGrid() {
-                let html = "";
-                for (const [, nd] of Object.entries(state.nodes)) {
-                    const lv = nd.level;
-                    const xp = nd.xp;
-                    const cur = xpInLevel(xp, lv);
-                    const need = xpForLevel(lv);
-                    const pct = ((cur / need) * 100).toFixed(1);
-                    html += `
-      <div class="node-card" style="--c:${nd.color}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
-            <div class="node-lbl">${nd.label}</div>
-            <div style="font-size:1.5rem;margin-top:2px">${nd.icon}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="node-lbl">LEVEL</div>
-            <div class="node-level">${String(lv).padStart(2, "0")}</div>
-          </div>
-        </div>
-        <div class="xp-bg"><div class="xp-fill" style="width:${pct}%"></div></div>
-        <div class="xp-txt">${cur}/${need} XP · ${pct}%</div>
-        <div class="xp-txt">Total: ${xp} XP</div>
-      </div>`;
-                }
-                document.getElementById("node-grid").innerHTML = html;
-            }
+  <!--
+    ═══════════════════════════════════════════════════════════
+    SCRIPT LOADING ORDER — dependencies must come before dependents
+    ═══════════════════════════════════════════════════════════
 
-            /**
-             * @private
-             * Renders a 28-day heatmap grid showing daily habit completion density.
-             */
-            function _renderHeatmap() {
-                const totalHabits = state.habits.length || 1;
-                let html = "";
-                for (let i = 27; i >= 0; i--) {
-                    const d = new Date();
-                    d.setDate(d.getDate() - i);
-                    const k = d.toISOString().slice(0, 10);
-                    const done = (state.completions[k] || []).length;
-                    const frac = done / totalHabits;
-                    const bg =
-                        frac > 0
-                            ? `rgba(10,10,10,${(0.1 + frac * 0.9).toFixed(2)})`
-                            : "#e8e3d8";
-                    const lbl = d.toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                    });
-                    html += `<div class="hm-cell" style="background:${bg}" title="${lbl}: ${done} habits"></div>`;
-                }
-                document.getElementById("heatmap").innerHTML = html;
-            }
+    Layer 1 — Foundation (no dependencies)
+      constants.js      magic values used everywhere
+      state.js          single source of truth
+      utils/xp.js       pure XP maths
+      utils/date.js     date helpers and formatters
+      utils/dom.js      el(), clearAndAppend(), formField() …
+      utils/ui.js       toast(), xpFloat()
+      utils/stats.js    efficiency(), bottleneck() …
 
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 11. RENDER: MANAGE PANEL
-            // ─────────────────────────────────────────────────────────────────────────────
+    Layer 2 — Components (depend on Layer 1 + state)
+      components/Header.js
+      components/IdentityBar.js
+      components/HabitCard.js
+      components/HabitList.js
+      components/Summary.js
+      components/FocusPanel.js
+      components/LabPanel.js
+      components/SubtaskList.js
+      components/GoalCard.js       depends on SubtaskList
+      components/GoalList.js       depends on GoalCard
+      components/NodeGrid.js
+      components/ManagePanel.js
 
-            /**
-             * Re-renders the habit list in the Manage panel.
-             */
-            function renderManage() {
-                let html = "";
-                for (const h of state.habits) {
-                    const nd = state.nodes[h.node];
-                    html += `
-      <div class="manage-row" style="--c:${nd.color}">
-        <span style="flex:1;font-size:.87rem">${h.name}</span>
-        <span style="font-size:.7rem;color:#555">${nd.icon} ${nd.label}</span>
-        <button class="btn btn-ghost" style="padding:3px 8px;font-size:.7rem"
-          onclick="deleteHabit(${h.id})">✕</button>
-      </div>`;
-                }
-                document.getElementById("manage-habits").innerHTML =
-                    html ||
-                    '<div style="color:#888;font-family:Space Mono,monospace;font-size:.8rem">No habits yet.</div>';
-            }
+    Layer 3 — Actions (mutate state then call renders)
+      actions/habits.js
+      actions/focus.js
+      actions/lab.js
+      actions/goals.js
+      actions/subtasks.js
+      actions/nodes.js
 
-            /**
-             * Re-renders the node list in the Manage panel.
-             * Built-in nodes show a "BUILT-IN" badge; custom nodes show a remove button.
-             */
-            function renderManageNodes() {
-                let html = "";
-                for (const [k, nd] of Object.entries(state.nodes)) {
-                    const isBuiltIn = BUILT_IN_NODES.includes(k);
-                    html += `
-      <div class="manage-row" style="--c:${nd.color}">
-        <span style="font-size:1.2rem;margin-right:4px">${nd.icon}</span>
-        <span style="flex:1;font-size:.9rem;font-family:'Archivo Black',sans-serif">${nd.label}</span>
-        <span style="font-size:.65rem;color:#555;margin-right:8px">Lv.${nd.level} · ${nd.xp} XP</span>
-        <div style="width:18px;height:18px;background:${nd.color};border:2px solid #0a0a0a;margin-right:8px;flex-shrink:0"></div>
-        ${
-            isBuiltIn
-                ? '<span style="color:#aaa;font-family:Space Mono,monospace;font-size:.65rem;padding:2px 8px;border:2px solid #ccc">BUILT-IN</span>'
-                : `<button class="btn btn-ghost" style="padding:3px 10px;font-size:.7rem" onclick="deleteNode('${k}')">✕ REMOVE</button>`
-        }
-      </div>`;
-                }
-                const el = document.getElementById("manage-nodes");
-                if (el) el.innerHTML = html;
-            }
+    Layer 4 — Entry point (wires everything together)
+      main.js
+    ═══════════════════════════════════════════════════════════
+  -->
 
-            /**
-             * Rebuilds the node <select> dropdowns in the Manage panel
-             * so they reflect any newly added or removed custom nodes.
-             */
-            function refreshNodeSelects() {
-                ["h-node", "g-node"].forEach((id) => {
-                    const sel = document.getElementById(id);
-                    if (!sel) return;
-                    const cur = sel.value;
-                    sel.innerHTML = "";
-                    for (const [k, nd] of Object.entries(state.nodes)) {
-                        const opt = document.createElement("option");
-                        opt.value = k;
-                        opt.textContent = nd.icon + " " + nd.label;
-                        if (k === cur) opt.selected = true;
-                        sel.appendChild(opt);
-                    }
-                });
-            }
+  <!-- Layer 1: Foundation -->
+  <script src="js/constants.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/utils/xp.js"></script>
+  <script src="js/utils/date.js"></script>
+  <script src="js/utils/dom.js"></script>
+  <script src="js/utils/ui.js"></script>
+  <script src="js/utils/stats.js"></script>
 
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 12. ACTIONS: HABITS
-            // ─────────────────────────────────────────────────────────────────────────────
+  <!-- Layer 2: Components -->
+  <script src="js/components/Header.js"></script>
+  <script src="js/components/IdentityBar.js"></script>
+  <script src="js/components/HabitCard.js"></script>
+  <script src="js/components/HabitList.js"></script>
+  <script src="js/components/Summary.js"></script>
+  <script src="js/components/FocusPanel.js"></script>
+  <script src="js/components/LabPanel.js"></script>
+  <script src="js/components/SubtaskList.js"></script>
+  <script src="js/components/GoalCard.js"></script>
+  <script src="js/components/GoalList.js"></script>
+  <script src="js/components/NodeGrid.js"></script>
+  <script src="js/components/ManagePanel.js"></script>
 
-            /**
-             * Toggles a habit's completion for today.
-             * Awards HABIT_XP to the linked node on first completion.
-             * @param {number} id    - Habit ID
-             * @param {MouseEvent} e - Click event (used for XP float position)
-             */
-            function toggleHabit(id, e) {
-                const today = todayStr();
-                if (!state.completions[today]) state.completions[today] = [];
-                const lst = state.completions[today];
-                const idx = lst.indexOf(id);
-                if (idx > -1) {
-                    lst.splice(idx, 1);
-                } else {
-                    lst.push(id);
-                    const h = state.habits.find((x) => x.id === id);
-                    if (h) {
-                        addXp(h.node, HABIT_XP);
-                        xpFloat(e.clientX, e.clientY, `+${HABIT_XP} XP`);
-                    }
-                }
-                renderFactory();
-            }
+  <!-- Layer 3: Actions -->
+  <script src="js/actions/habits.js"></script>
+  <script src="js/actions/focus.js"></script>
+  <script src="js/actions/lab.js"></script>
+  <script src="js/actions/goals.js"></script>
+  <script src="js/actions/subtasks.js"></script>
+  <script src="js/actions/nodes.js"></script>
 
-            /**
-             * Creates a new habit from the Manage panel form and adds it to state.
-             */
-            function addHabit() {
-                const name = document.getElementById("h-name").value.trim();
-                const node = document.getElementById("h-node").value;
-                if (!name) {
-                    toast("Enter a habit name", "#FF3B3B");
-                    return;
-                }
-                state.habits.push({ id: state.nextHabitId++, name, node });
-                document.getElementById("h-name").value = "";
-                renderFactory();
-                renderManage();
-                toast("Added: " + name, "#00c853");
-            }
+  <!-- Layer 4: Entry point -->
+  <script src="js/main.js"></script>
 
-            /**
-             * Removes a habit from state by ID.
-             * @param {number} id - Habit ID to remove
-             */
-            function deleteHabit(id) {
-                state.habits = state.habits.filter((h) => h.id !== id);
-                renderFactory();
-                renderManage();
-                toast("Habit removed", "#FF3B3B");
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 13. ACTIONS: GOALS
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Creates a new goal from the Manage panel form and adds it to state.
-             */
-            function addGoal() {
-                const label = document.getElementById("g-label").value.trim();
-                const node = document.getElementById("g-node").value;
-                const xp_cost =
-                    parseInt(document.getElementById("g-xp").value) || 200;
-                const unlocks =
-                    document.getElementById("g-unlocks").value.trim() || null;
-                if (!label) {
-                    toast("Enter a goal label", "#FF3B3B");
-                    return;
-                }
-                state.goals.push({
-                    id: state.nextGoalId++,
-                    label,
-                    node,
-                    xp_cost,
-                    unlocks,
-                    completed: false,
-                    subtasks: [],
-                });
-                document.getElementById("g-label").value = "";
-                document.getElementById("g-unlocks").value = "";
-                renderGoals();
-                toast(
-                    "Goal added — open Tech Tree to add milestones",
-                    "#00c853",
-                );
-            }
-
-            /**
-             * Spends node XP to mark a goal as completed (researched).
-             * @param {number} gid - Goal ID
-             */
-            function researchGoal(gid) {
-                const g = state.goals.find((x) => x.id === gid);
-                if (!g || g.completed) return;
-                if (state.nodes[g.node].xp >= g.xp_cost) {
-                    state.nodes[g.node].xp -= g.xp_cost;
-                    state.nodes[g.node].level = levelFromXp(
-                        state.nodes[g.node].xp,
-                    );
-                    g.completed = true;
-                    renderGoals();
-                    renderNodes();
-                    toast("✅ Unlocked: " + g.label, "#00c853");
-                }
-            }
-
-            /**
-             * Toggles the subtask panel open/closed for a goal.
-             * @param {number} gid - Goal ID
-             */
-            function toggleExpand(gid) {
-                expandedGoals.has(gid)
-                    ? expandedGoals.delete(gid)
-                    : expandedGoals.add(gid);
-                renderGoals();
-            }
-
-            /**
-             * Enters edit mode for a goal, re-rendering with the inline edit form visible.
-             * @param {number} gid - Goal ID
-             */
-            function startGoalEdit(gid) {
-                editingGoal = gid;
-                renderGoals();
-                setTimeout(() => {
-                    const el = document.getElementById("eg-label-" + gid);
-                    if (el) el.focus();
-                }, 50);
-            }
-
-            /** Exits goal edit mode without saving. */
-            function cancelGoalEdit() {
-                editingGoal = null;
-                renderGoals();
-            }
-
-            /**
-             * Saves changes from the inline edit form back to state.
-             * @param {number} gid - Goal ID
-             */
-            function saveGoalEdit(gid) {
-                const g = state.goals.find((x) => x.id === gid);
-                if (!g) return;
-                const label = document
-                    .getElementById("eg-label-" + gid)
-                    .value.trim();
-                const node = document.getElementById("eg-node-" + gid).value;
-                const xp_cost =
-                    parseInt(document.getElementById("eg-xp-" + gid).value) ||
-                    200;
-                const unlocks =
-                    document.getElementById("eg-unlocks-" + gid).value.trim() ||
-                    null;
-                if (!label) {
-                    toast("Label cannot be empty", "#FF3B3B");
-                    return;
-                }
-                g.label = label;
-                g.node = node;
-                g.xp_cost = xp_cost;
-                g.unlocks = unlocks;
-                editingGoal = null;
-                renderGoals();
-                toast("Goal updated", "#00c853");
-            }
-
-            /**
-             * Deletes a goal after a double-click confirmation.
-             * First click changes the button label; second click within 3s confirms deletion.
-             * @param {number} gid - Goal ID
-             */
-            function deleteGoal(gid) {
-                if (deleteGoalPending === gid) {
-                    clearTimeout(window._deleteGoalTimer);
-                    deleteGoalPending = null;
-                    state.goals = state.goals.filter((g) => g.id !== gid);
-                    expandedGoals.delete(gid);
-                    if (editingGoal === gid) editingGoal = null;
-                    renderGoals();
-                    toast("Goal deleted", "#FF3B3B");
-                } else {
-                    deleteGoalPending = gid;
-                    const btn = event.target;
-                    btn.textContent = "⚠ CLICK AGAIN TO CONFIRM";
-                    btn.style.background = "#0a0a0a";
-                    window._deleteGoalTimer = setTimeout(() => {
-                        deleteGoalPending = null;
-                        renderGoals();
-                    }, 3000);
-                }
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 14. ACTIONS: SUBTASKS
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Toggles a subtask's done state.
-             * Awards TASK_XP to the goal's node on completion.
-             * @param {number} gid - Goal ID
-             * @param {number} tid - Subtask ID
-             */
-            function toggleTask(gid, tid) {
-                const g = state.goals.find((x) => x.id === gid);
-                if (!g) return;
-                const t = g.subtasks.find((x) => x.id === tid);
-                if (!t) return;
-                t.done = !t.done;
-                if (t.done) {
-                    addXp(g.node, TASK_XP);
-                    toast(
-                        `+${TASK_XP} XP — ${state.nodes[g.node].label}`,
-                        "#FFE500",
-                    );
-                }
-                renderGoals();
-                renderNodes();
-                renderHeader();
-            }
-
-            /**
-             * Removes a subtask from a goal.
-             * @param {number} gid - Goal ID
-             * @param {number} tid - Subtask ID
-             */
-            function deleteTask(gid, tid) {
-                const g = state.goals.find((x) => x.id === gid);
-                if (!g) return;
-                g.subtasks = g.subtasks.filter((t) => t.id !== tid);
-                renderGoals();
-            }
-
-            /**
-             * Adds a new subtask to a goal from the inline input field.
-             * Expands the subtask panel if not already open.
-             * @param {number} gid - Goal ID
-             */
-            function addTask(gid) {
-                const inp = document.getElementById("ti-" + gid);
-                const label = inp ? inp.value.trim() : "";
-                if (!label) return;
-                const g = state.goals.find((x) => x.id === gid);
-                if (!g) return;
-                g.subtasks.push({ id: state.nextTaskId++, label, done: false });
-                expandedGoals.add(gid);
-                inp.value = "";
-                renderGoals();
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 15. ACTIONS: NODES
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Creates a new custom node from the Manage panel form.
-             */
-            function addNode() {
-                const label = document.getElementById("n-label").value.trim();
-                const icon =
-                    document.getElementById("n-icon").value.trim() || "⭐";
-                const color = document.getElementById("n-color").value;
-                if (!label) {
-                    toast("Enter a node name", "#FF3B3B");
-                    return;
-                }
-                const key = "node_" + Date.now();
-                state.nodes[key] = { label, icon, color, xp: 0, level: 1 };
-                document.getElementById("n-label").value = "";
-                document.getElementById("n-icon").value = "";
-                refreshNodeSelects();
-                renderNodes();
-                renderManageNodes();
-                toast("Node added: " + label, "#00c853");
-            }
-
-            /**
-             * Removes a custom node from state.
-             * Habits and goals that referenced the deleted node are reassigned to 'work'.
-             * Built-in nodes cannot be deleted.
-             * @param {string} key - Node key to delete
-             */
-            function deleteNode(key) {
-                if (BUILT_IN_NODES.includes(key)) {
-                    toast("Cannot delete built-in nodes", "#FF3B3B");
-                    return;
-                }
-                state.habits.forEach((h) => {
-                    if (h.node === key) h.node = "work";
-                });
-                state.goals.forEach((g) => {
-                    if (g.node === key) g.node = "work";
-                });
-                delete state.nodes[key];
-                refreshNodeSelects();
-                renderFactory();
-                renderGoals();
-                renderNodes();
-                renderManageNodes();
-                toast("Node removed", "#FF3B3B");
-            }
-
-            // ─────────────────────────────────────────────────────────────────────────────
-            // 16. INITIALISATION
-            // ─────────────────────────────────────────────────────────────────────────────
-
-            /**
-             * Bootstraps the application by running an initial render of every panel.
-             */
-            function init() {
-                renderHeader();
-                renderFactory();
-                renderGoals();
-                renderNodes();
-                renderManage();
-                renderManageNodes();
-            }
-
-            init();
-        </script>
-    </body>
+</body>
 </html>
